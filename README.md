@@ -122,7 +122,7 @@ Users interact with on-chain logic for:
 | Frontend   | React / React Native, Tailwind CSS |
 | AI/ML      | TensorFlow.js, Hugging Face Models |
 | Eye Tracking | MediaPipe Face Mesh               |
-| Blockchain | Solidity / Move, Sui Blockchain     |
+| Blockchain | Solidity , Holesky Network    |
 | Storage    | IPFS + encrypted metadata           |
 | Fitbit     | Fitbit Developer API                |
 
