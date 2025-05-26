@@ -6,6 +6,8 @@ import './App.css'
 import Login from './pages/login'
 import Register from './pages/register'
 import Home from './pages/home'
+import EyeDetectionTimer from './components/EyeMonitor'
+import Chatbot from './components/Chatbot'
 function App() {
   const [count, setCount] = useState(0)
 
@@ -15,6 +17,8 @@ function App() {
         <Route path="/login" element={<Login />}></Route>
         <Route path="/register" element={<Register />}></Route>
         <Route path="/" element={<Home />}></Route>
+        <Route path="meditate" element={<EyeDetectionTimer />}></Route>
+        
       </Routes>
     </BrowserRouter>
   )

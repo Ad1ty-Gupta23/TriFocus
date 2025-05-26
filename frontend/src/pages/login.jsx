@@ -40,7 +40,7 @@ function Login() {
         if (res.data.user.role === "admin") {
           navigate("/admin-dashboard");
         } else {
-          navigate("/dashboard");
+          navigate("/");
         }
       } else {
         setError(res.data.message || "Login failed. Please try again.");
