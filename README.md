@@ -3,10 +3,10 @@
 
 ---
 # Team Members:
-👩‍💼 Aditya Gupta – Team Lead, Full Stack Dev
-👩‍💼 Rajat Dubey –  Full Stack Dev
-👩‍💼 Atharva More – Full Stack Dev
-👩‍💼 Niraj Sonawane – Full Stack Dev
+- 👩‍💼 Aditya Gupta – Team Lead, Full Stack Dev
+- 👩‍💼 Rajat Dubey –  Full Stack Dev
+- 👩‍💼 Atharva More – Full Stack Dev
+- 👩‍💼 Niraj Sonawane – Full Stack Dev
 
 
 ## 📌 Problem Statement  
