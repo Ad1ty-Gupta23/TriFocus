@@ -2,11 +2,13 @@ import React, { useState, useEffect } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { toast } from "react-toastify";
 
-function Navbar({ isLoggedIn, user }) {
+function Navbar({ isLoggedIn: propIsLoggedIn, user }) {
   const navigate = useNavigate();
   const location = useLocation();
   const [walletAddress, setWalletAddress] = useState("");
   const [isConnected, setIsConnected] = useState(false);
+  const [isLoggedIn, setIsLoggedIn] = useState(propIsLoggedIn || false);
+  const [isWalletConnected, setIsWalletConnected] = useState(false);
   const [role, setRole] = useState(null);
   const [crisisAlerts, setCrisisAlerts] = useState(0);
   const [pendingAppointments, setPendingAppointments] = useState(0);
@@ -15,7 +17,7 @@ function Navbar({ isLoggedIn, user }) {
   const getActiveSection = () => {
     const path = location.pathname;
     if (path.includes('/journal')) return 'journal';
-    if (path.includes('/meditation')) return 'meditation';
+    if (path.includes('/meditate')) return 'meditation';
     if (path.includes('/rewards')) return 'rewards';
     if (path.includes('/appointments')) return 'appointments';
     if (path.includes('/crisis')) return 'crisis';
@@ -31,11 +33,38 @@ function Navbar({ isLoggedIn, user }) {
   useEffect(() => {
     checkIfWalletIsConnected();
     const storedRole = localStorage.getItem("role");
+    const storedUser = localStorage.getItem("user");
+    
     setRole(storedRole);
+    setIsLoggedIn(!!storedUser || propIsLoggedIn);
     
     if (storedRole === "Therapist") {
       loadTherapistDashboardData();
     }
+  }, [propIsLoggedIn]);
+
+  // Update wallet connection state when wallet status changes
+  useEffect(() => {
+    setIsWalletConnected(isConnected);
+  }, [isConnected]);
+
+  // Listen for wallet connection events
+  useEffect(() => {
+    const handleWalletConnected = () => {
+      setIsWalletConnected(true);
+    };
+
+    const handleWalletDisconnected = () => {
+      setIsWalletConnected(false);
+    };
+
+    window.addEventListener("walletConnected", handleWalletConnected);
+    window.addEventListener("walletDisconnected", handleWalletDisconnected);
+
+    return () => {
+      window.removeEventListener("walletConnected", handleWalletConnected);
+      window.removeEventListener("walletDisconnected", handleWalletDisconnected);
+    };
   }, []);
 
   const loadTherapistDashboardData = () => {
@@ -51,6 +80,7 @@ function Navbar({ isLoggedIn, user }) {
       if (accounts.length !== 0) {
         setWalletAddress(accounts[0]);
         setIsConnected(true);
+        setIsWalletConnected(true);
       }
     } catch (error) {
       console.error("Error checking wallet:", error);
@@ -67,6 +97,7 @@ function Navbar({ isLoggedIn, user }) {
       const accounts = await ethereum.request({ method: "eth_requestAccounts" });
       setWalletAddress(accounts[0]);
       setIsConnected(true);
+      setIsWalletConnected(true);
       toast.success("Wallet connected successfully!");
       window.dispatchEvent(new Event("walletConnected"));
     } catch (error) {
@@ -78,6 +109,7 @@ function Navbar({ isLoggedIn, user }) {
   const disconnectWallet = () => {
     setWalletAddress("");
     setIsConnected(false);
+    setIsWalletConnected(false);
     toast.info("Wallet disconnected");
     window.dispatchEvent(new Event("walletDisconnected"));
   };
@@ -85,6 +117,7 @@ function Navbar({ isLoggedIn, user }) {
   const handleLogout = () => {
     localStorage.removeItem("user");
     localStorage.removeItem("role");
+    setIsLoggedIn(false);
     toast.success("Logged out successfully");
     window.location.reload();
   };
@@ -96,7 +129,7 @@ function Navbar({ isLoggedIn, user }) {
 
           {/* Logo */}
           <div className="flex items-center">
-            <Link to="/dashboard" className="text-2xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
+            <Link to="/" className="text-2xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
               TriFocus
             </Link>
             {role === "Therapist" && (
@@ -112,7 +145,7 @@ function Navbar({ isLoggedIn, user }) {
             {role === "Volunteer" && (
               <>
                 <Link
-                  to="/meditation"
+                  to="/meditate"
                   className={`px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
                     activeSection === "meditation" 
                       ? "bg-indigo-100 text-indigo-700" 
@@ -132,14 +165,14 @@ function Navbar({ isLoggedIn, user }) {
                   Journal
                 </Link>
                 <Link
-                  to="/rewards"
+                  to="/therapist"
                   className={`px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
                     activeSection === "rewards" 
                       ? "bg-indigo-100 text-indigo-700" 
                       : "text-gray-600 hover:text-indigo-600 hover:bg-gray-50"
                   }`}
                 >
-                  Rewards
+                Redeem
                 </Link>
               </>
             )}
@@ -258,7 +291,7 @@ function Navbar({ isLoggedIn, user }) {
 
           {/* Wallet Section */}
           <div className="flex items-center">
-            {isConnected ? (
+            {isWalletConnected ? (
               <div className="flex items-center space-x-2 px-3 py-2 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-lg">
                 <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -295,7 +328,7 @@ function Navbar({ isLoggedIn, user }) {
                 </span>
                 {role === "Volunteer" && (
                   <button 
-                    onClick={() => navigate("/pokemon")} 
+                    onClick={() => navigate("/games")} 
                     className="px-4 py-2 text-sm font-medium text-indigo-600 hover:text-indigo-700 transition-colors"
                   >
                     Fun Games

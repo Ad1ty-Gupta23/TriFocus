@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from "react";
-import axios from "axios";
 import { Users, Mail, UserCheck, AlertCircle, Loader2 } from "lucide-react";
-
+import Navbar from "./Navbar";
 const TherapistList = () => {
   const [therapists, setTherapists] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -14,10 +13,14 @@ const TherapistList = () => {
         setError(null);
         
         // Use your actual API endpoint - note the correct path structure
-        const res = await axios.get("http://localhost:5000/api/user/therapists");
+        const response = await fetch("http://localhost:5000/api/user/therapists");
+        if (!response.ok) {
+          throw new Error('Network response was not ok');
+        }
+        const data = await response.json();
         
         // Since your getTherapists controller should return only therapists
-        setTherapists(res.data);
+        setTherapists(data);
       } catch (err) {
         console.error("Failed to fetch therapists:", err);
         setError("Failed to load therapists. Please try again later.");
@@ -30,15 +33,15 @@ const TherapistList = () => {
   }, []);
 
   const UserCard = ({ user, roleColor }) => (
-    <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 hover:shadow-md transition-shadow duration-200">
-      <div className="flex items-center space-x-3">
-        <div className={`p-2 rounded-full ${roleColor}`}>
-          <UserCheck className="w-5 h-5 text-white" />
+    <div className="bg-white/10 backdrop-blur-lg rounded-xl border border-white/20 p-6 hover:bg-white/15 transition-all duration-300 hover:scale-105 shadow-lg">
+      <div className="flex items-center space-x-4">
+        <div className={`p-3 rounded-full ${roleColor} shadow-lg`}>
+          <UserCheck className="w-6 h-6 text-white" />
         </div>
         <div className="flex-1">
-          <h3 className="font-semibold text-gray-900">{user.username}</h3>
-          <div className="flex items-center text-gray-600 text-sm mt-1">
-            <Mail className="w-4 h-4 mr-1" />
+          <h3 className="font-semibold text-white text-lg">{user.username}</h3>
+          <div className="flex items-center text-white/80 text-sm mt-2">
+            <Mail className="w-4 h-4 mr-2" />
             {user.email}
           </div>
         </div>
@@ -47,30 +50,30 @@ const TherapistList = () => {
   );
 
   const SectionHeader = ({ title, count, icon: Icon }) => (
-    <div className="flex items-center space-x-3 mb-6">
-      <div className="p-2 bg-green-100 rounded-lg">
-        <Icon className="w-6 h-6 text-green-600" />
+    <div className="flex items-center space-x-4 mb-8">
+      <div className="p-3 bg-gradient-to-r from-pink-500 to-purple-600 rounded-xl shadow-lg">
+        <Icon className="w-8 h-8 text-white" />
       </div>
       <div>
-        <h2 className="text-2xl font-bold text-gray-900">{title}</h2>
-        <p className="text-gray-600">{count} {count === 1 ? 'member' : 'members'}</p>
+        <h2 className="text-3xl font-bold text-white">{title}</h2>
+        <p className="text-white/70 text-lg">{count} {count === 1 ? 'member' : 'members'}</p>
       </div>
     </div>
   );
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50">
-        <header className="bg-gradient-to-r from-green-600 to-green-700 text-white py-8">
-          <div className="max-w-4xl mx-auto px-4 text-center">
-            <h1 className="text-3xl font-bold mb-2">Our Professional Therapists</h1>
-            <p className="text-green-100">Connect with qualified mental health professionals</p>
+      <div className="min-h-screen bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-900">
+        <header className="bg-gradient-to-r from-purple-800/50 to-pink-800/50 backdrop-blur-sm text-white py-12">
+          <div className="max-w-6xl mx-auto px-6 text-center">
+            <h1 className="text-4xl font-bold mb-4">Our Professional Therapists</h1>
+            <p className="text-white/80 text-lg">Connect with qualified mental health professionals</p>
           </div>
         </header>
-        <div className="max-w-4xl mx-auto px-4 py-8">
-          <div className="flex items-center justify-center space-x-2 text-gray-600">
-            <Loader2 className="w-6 h-6 animate-spin" />
-            <span>Loading therapists...</span>
+        <div className="max-w-6xl mx-auto px-6 py-12">
+          <div className="flex items-center justify-center space-x-3 text-white">
+            <Loader2 className="w-8 h-8 animate-spin" />
+            <span className="text-xl">Loading therapists...</span>
           </div>
         </div>
       </div>
@@ -79,19 +82,19 @@ const TherapistList = () => {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-gray-50">
-        <header className="bg-gradient-to-r from-green-600 to-green-700 text-white py-8">
-          <div className="max-w-4xl mx-auto px-4 text-center">
-            <h1 className="text-3xl font-bold mb-2">Community Support Team</h1>
-            <p className="text-green-100">Meet our Volunteers and Therapists</p>
+      <div className="min-h-screen bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-900">
+        <header className="bg-gradient-to-r from-purple-800/50 to-pink-800/50 backdrop-blur-sm text-white py-12">
+          <div className="max-w-6xl mx-auto px-6 text-center">
+            <h1 className="text-4xl font-bold mb-4">Community Support Team</h1>
+            <p className="text-white/80 text-lg">Meet our Volunteers and Therapists</p>
           </div>
         </header>
-        <div className="max-w-4xl mx-auto px-4 py-8">
-          <div className="bg-red-50 border border-red-200 rounded-lg p-4 flex items-center space-x-3">
-            <AlertCircle className="w-6 h-6 text-red-600" />
+        <div className="max-w-6xl mx-auto px-6 py-12">
+          <div className="bg-red-500/20 backdrop-blur-lg border border-red-400/30 rounded-xl p-6 flex items-center space-x-4">
+            <AlertCircle className="w-8 h-8 text-red-300" />
             <div>
-              <h3 className="font-semibold text-red-800">Error Loading Data</h3>
-              <p className="text-red-700">{error}</p>
+              <h3 className="font-semibold text-red-200 text-lg">Error Loading Data</h3>
+              <p className="text-red-300">{error}</p>
             </div>
           </div>
         </div>
@@ -100,38 +103,41 @@ const TherapistList = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <header className="bg-gradient-to-r from-green-600 to-green-700 text-white py-8">
-        <div className="max-w-4xl mx-auto px-4 text-center">
-          <h1 className="text-3xl font-bold mb-2">Community Support Team</h1>
-          <p className="text-green-100">Meet our Volunteers and Therapists</p>
+    <>
+    <Navbar/>
+    <div className="min-h-screen bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-900">
+      <header className="bg-gradient-to-r from-purple-800/50 to-pink-800/50 backdrop-blur-sm text-white py-12">
+        <div className="max-w-6xl mx-auto px-6 text-center">
+          <h1 className="text-4xl font-bold mb-4">Community Support Team</h1>
+          <p className="text-white/80 text-lg">Meet our Volunteers and Therapists</p>
         </div>
       </header>
 
-      <div className="max-w-4xl mx-auto px-4 py-8">
+      <div className="max-w-6xl mx-auto px-6 py-12">
         <SectionHeader 
           title="Available Therapists" 
           count={therapists.length}
           icon={UserCheck}
         />
         {therapists.length > 0 ? (
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
             {therapists.map((therapist) => (
               <UserCard 
                 key={therapist._id} 
                 user={therapist} 
-                roleColor="bg-green-500"
+                roleColor="bg-gradient-to-r from-purple-500 to-pink-500"
               />
             ))}
           </div>
         ) : (
-          <div className="text-center py-8 text-gray-500">
-            <UserCheck className="w-12 h-12 mx-auto mb-4 text-gray-300" />
-            <p>No therapists available at the moment</p>
+          <div className="text-center py-16 text-white/70">
+            <UserCheck className="w-16 h-16 mx-auto mb-6 text-white/40" />
+            <p className="text-xl">No therapists available at the moment</p>
           </div>
         )}
       </div>
     </div>
+    </>
   );
 };
 

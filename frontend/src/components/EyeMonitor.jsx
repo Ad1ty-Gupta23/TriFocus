@@ -207,40 +207,40 @@ const EyeDetectionTimer = () => {
   return (
     <>
     <Navbar />
-    <div className="flex flex-col items-center p-6 bg-gray-100 min-h-screen">
+    <div className="flex flex-col items-center p-6 min-h-screen bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-900">
 
-      <h1 className="text-3xl font-bold mb-6 text-gray-800">
+      <h1 className="text-3xl font-bold mb-6 text-white">
         Eye Detection Timer with Face Mesh
       </h1>
       
       {isLoading && (
         <div className="mb-4">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="text-center mt-2 text-gray-600">Loading face detection model...</p>
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white mx-auto"></div>
+          <p className="text-center mt-2 text-white">Loading face detection model...</p>
         </div>
       )}
       
-      <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
+      <div className="bg-white/10 backdrop-blur-sm rounded-lg shadow-lg p-6 mb-6 border border-white/20">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-center">
-          <div className="bg-blue-50 p-4 rounded-lg">
-            <h3 className="text-lg font-semibold text-blue-800">Blinks Detected</h3>
-            <p className="text-2xl font-bold text-blue-600">{eyesBlinkedCount}</p>
+          <div className="bg-blue-50/20 backdrop-blur-sm p-4 rounded-lg border border-blue-200/30">
+            <h3 className="text-lg font-semibold text-blue-100">Blinks Detected</h3>
+            <p className="text-2xl font-bold text-blue-300">{eyesBlinkedCount}</p>
           </div>
           
-          <div className="bg-green-50 p-4 rounded-lg">
-            <h3 className="text-lg font-semibold text-green-800">Eyes Status</h3>
-            <p className={`text-2xl font-bold ${eyesClosed ? 'text-red-600' : 'text-green-600'}`}>
+          <div className="bg-green-50/20 backdrop-blur-sm p-4 rounded-lg border border-green-200/30">
+            <h3 className="text-lg font-semibold text-green-100">Eyes Status</h3>
+            <p className={`text-2xl font-bold ${eyesClosed ? 'text-red-400' : 'text-green-400'}`}>
               {eyesClosed ? 'CLOSED' : 'OPEN'}
             </p>
           </div>
           
-          <div className="bg-yellow-50 p-4 rounded-lg">
-            <h3 className="text-lg font-semibold text-yellow-800">Timer</h3>
+          <div className="bg-yellow-50/20 backdrop-blur-sm p-4 rounded-lg border border-yellow-200/30">
+            <h3 className="text-lg font-semibold text-yellow-100">Timer</h3>
             <p className={`text-2xl font-bold ${getTimerColor()}`}>
               {formatTime(timerSeconds)}
             </p>
             {timerSeconds >= 300 && (
-              <p className="text-sm text-red-600 font-semibold animate-pulse">
+              <p className="text-sm text-red-400 font-semibold animate-pulse">
                 5 MINUTES REACHED!
               </p>
             )}
@@ -248,7 +248,7 @@ const EyeDetectionTimer = () => {
         </div>
       </div>
       
-      <div className="relative bg-black rounded-lg overflow-hidden shadow-lg">
+      <div className="relative bg-black/50 backdrop-blur-sm rounded-lg overflow-hidden shadow-lg border border-white/20">
         <canvas 
           ref={canvasRef}
           className="block transform scale-x-[-1]"
@@ -264,8 +264,8 @@ const EyeDetectionTimer = () => {
         />
       </div>
       
-      <div className="mt-6 text-center text-gray-600 max-w-2xl">
-        <h3 className="text-lg font-semibold mb-2">How it works:</h3>
+      <div className="mt-6 text-center text-white/80 max-w-2xl">
+        <h3 className="text-lg font-semibold mb-2 text-white">How it works:</h3>
         <ul className="text-sm space-y-1">
           <li>• Timer starts automatically when your eyes are detected as closed</li>
           <li>• Timer resets to 0 when your eyes open</li>
