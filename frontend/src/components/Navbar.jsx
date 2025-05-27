@@ -169,7 +169,7 @@ function Navbar({ isLoggedIn: propIsLoggedIn, user: propUser }) {
             {role === "Volunteer" && (
               <>
                 <Link
-                  to="/meditate"
+                  to="/meditation"
                   className={`px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
                     activeSection === "meditation" 
                       ? "bg-indigo-100 text-indigo-700" 
@@ -189,7 +189,7 @@ function Navbar({ isLoggedIn: propIsLoggedIn, user: propUser }) {
                   Journal
                 </Link>
                 <Link
-                  to="/therapist"
+                  to="/redeem"
                   className={`px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
                     activeSection === "rewards" 
                       ? "bg-indigo-100 text-indigo-700" 
@@ -299,18 +299,19 @@ function Navbar({ isLoggedIn: propIsLoggedIn, user: propUser }) {
             )}
 
             {/* Common navigation items for all roles */}
-            {isLoggedIn && user?.role !== "Therapist" && (
-              <Link
-                to="/games"
-                className={`px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
-                  activeSection === "games" 
-                    ? "bg-indigo-100 text-indigo-700" 
-                    : "text-gray-600 hover:text-indigo-600 hover:bg-gray-50"
-                }`}
-              >
-                Fun Games
-              </Link>
-            )}
+            {isLoggedIn && role === "Volunteer" && (
+  <Link
+    to="/games"
+    className={`px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+      activeSection === "games"
+        ? "bg-indigo-100 text-indigo-700"
+        : "text-gray-600 hover:text-indigo-600 hover:bg-gray-50"
+    }`}
+  >
+    Fun Games
+  </Link>
+)}
+
           </nav>
 
           {/* Wallet Section */}

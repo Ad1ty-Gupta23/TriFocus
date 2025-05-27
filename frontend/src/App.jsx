@@ -13,6 +13,12 @@ import GamesHub from './pages/Games.jsx'
 import CosmicDefender from './components/CosmicDefender.jsx';
 import TherapistAppointments from './components/TherapistAppointments';
 import PatientFiles from './components/PatientFiles.jsx'
+import CosmicDefender from './components/CosmicDefender.jsx'
+import FocusForestTimer from './components/FocusForestTimer.jsx'
+import MedicalReportAnalyzer from './components/DiseaseDetection.jsx'
+import MeditationHome from './pages/MediHome.jsx'
+import RedeemStore from './components/Store.jsx'
+import CombinedStorePage from './pages/CombinedStorePage.jsx'
 
 function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -42,10 +48,14 @@ function App() {
             path="/journal" 
             element={ <Journal user={user} />} 
           />
+          <Route path="/forest" element={<FocusForestTimer />}></Route>
           <Route path="/cosmic" element={<CosmicDefender />}></Route>
         <Route path="/appointments" element={<TherapistAppointments />} />
         <Route path="/patient-files" element={<PatientFiles />} />  
         
+          <Route path="/crisis" element={<MedicalReportAnalyzer />}></Route>
+        <Route path="/meditation" element={<MeditationHome />}></Route>
+        <Route path='/redeem' element={<CombinedStorePage />}></Route>
       </Routes>
     </BrowserRouter>
   )
