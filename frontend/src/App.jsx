@@ -13,7 +13,6 @@ import GamesHub from './pages/Games.jsx'
 import CosmicDefender from './components/CosmicDefender.jsx';
 import TherapistAppointments from './components/TherapistAppointments';
 import PatientFiles from './components/PatientFiles.jsx'
-import CosmicDefender from './components/CosmicDefender.jsx'
 import FocusForestTimer from './components/FocusForestTimer.jsx'
 import MedicalReportAnalyzer from './components/DiseaseDetection.jsx'
 import MeditationHome from './pages/MediHome.jsx'
