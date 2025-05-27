@@ -11,6 +11,7 @@ import Game from './pages/game1'
 import Chatbot from './components/Chatbot'
 import PokemonBattle from "./brawl/PokemonBattle.jsx";
 import Journal from './components/Journal';
+import TherapistList from './components/TherapistList';
 function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [user, setUser] = useState(null);
@@ -33,6 +34,7 @@ function App() {
         <Route path="/meditate" element={<EyeDetectionTimer />}></Route>
         <Route path="/game" element={<Game />}></Route>
         <Route path="/pokemon" element={<PokemonBattle />}></Route>
+        <Route path="/therapist" element={<TherapistList />}></Route>
         <Route 
             path="/journal" 
             element={isLoggedIn ? <Journal user={user} /> : <Navigate to="/login" />} 

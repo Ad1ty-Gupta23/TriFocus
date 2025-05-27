@@ -83,3 +83,14 @@ export const login = async (req, res, next) => {
     next(err);
   }
 };
+
+// Get all therapists
+export const getTherapists = async (req, res) => {
+  try {
+    const therapists = await Users.find({ role: 'Therapist' });
+    res.json(therapists);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Failed to fetch therapists' });
+  }
+};
