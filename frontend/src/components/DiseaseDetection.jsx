@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import Navbar from "./Navbar";
 import {
   Upload,
   FileText,
@@ -9,6 +10,8 @@ import {
 import React from 'react';
 
 const MedicalReportAnalyzer = () => {
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [user, setUser] = useState(null);
   const [uploadedFile, setUploadedFile] = useState(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [analysisResult, setAnalysisResult] = useState(null);
@@ -104,7 +107,15 @@ const MedicalReportAnalyzer = () => {
     return normal ? <CheckCircle className="h-4 w-4 text-green-500" /> : <AlertCircle className="h-4 w-4 text-red-500" />;
   };
 
+  const handleLogin = (userData) => {
+    setIsLoggedIn(true);
+    setUser(userData);
+    localStorage.setItem("user", JSON.stringify(userData));
+  };
+
   return (
+    <>
+    <Navbar isLoggedIn={isLoggedIn} user={user} />
     <div className="min-h-screen bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-900 text-white flex justify-center items-start py-10 px-4">
       <div className="bg-white/10 backdrop-blur-xl border border-white/20 rounded-3xl shadow-xl max-w-6xl w-full p-8">
         <div className="text-center mb-10">
@@ -221,6 +232,7 @@ const MedicalReportAnalyzer = () => {
         )}
       </div>
     </div>
+    </>
   );
 };
 

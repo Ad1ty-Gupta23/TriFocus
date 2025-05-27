@@ -10,7 +10,9 @@ import PokemonBattle from "./brawl/PokemonBattle.jsx";
 import Journal from './components/Journal';
 import TherapistList from './components/TherapistList';
 import GamesHub from './pages/Games.jsx'
-import CosmicDefender from './components/CosmicDefender.jsx'
+import CosmicDefender from './components/CosmicDefender.jsx';
+import TherapistAppointments from './components/TherapistAppointments';
+import PatientFiles from './components/PatientFiles.jsx'
 import FocusForestTimer from './components/FocusForestTimer.jsx'
 import MedicalReportAnalyzer from './components/DiseaseDetection.jsx'
 import MeditationHome from './pages/MediHome.jsx'
@@ -50,6 +52,9 @@ function App() {
           />
           <Route path="/forest" element={<FocusForestTimer />}></Route>
           <Route path="/cosmic" element={<CosmicDefender />}></Route>
+        <Route path="/appointments" element={<TherapistAppointments />} />
+        <Route path="/patient-files" element={<PatientFiles />} />  
+        
           <Route path="/crisis" element={<MedicalReportAnalyzer />}></Route>
         <Route path="/meditation" element={<MeditationHome />}></Route>
         <Route path='/redeem' element={<CombinedStorePage />}></Route>
