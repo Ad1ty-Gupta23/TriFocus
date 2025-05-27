@@ -1,7 +1,7 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import reactLogo from './assets/react.svg'
 import viteLogo from '/vite.svg'
-import { BrowserRouter, Route, Routes } from 'react-router-dom'
+import { BrowserRouter, Route, Routes, Navigate } from 'react-router-dom'
 import './App.css'
 import Login from './pages/login'
 import Register from './pages/register'
@@ -10,8 +10,19 @@ import EyeDetectionTimer from './components/EyeMonitor'
 import Game from './pages/game1'
 import Chatbot from './components/Chatbot'
 import PokemonBattle from "./brawl/PokemonBattle.jsx";
+import Journal from './components/Journal';
 function App() {
-  const [count, setCount] = useState(0)
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [user, setUser] = useState(null);
+
+  useEffect(() => {
+    // Check if user is logged in
+    const savedUser = localStorage.getItem('user');
+    if (savedUser) {
+      setUser(JSON.parse(savedUser));
+      setIsLoggedIn(true);
+    }
+  }, []);
 
   return (
     <BrowserRouter>
@@ -22,6 +33,10 @@ function App() {
         <Route path="/meditate" element={<EyeDetectionTimer />}></Route>
         <Route path="/game" element={<Game />}></Route>
         <Route path="/pokemon" element={<PokemonBattle />}></Route>
+        <Route 
+            path="/journal" 
+            element={isLoggedIn ? <Journal user={user} /> : <Navigate to="/login" />} 
+          />
         
       </Routes>
     </BrowserRouter>

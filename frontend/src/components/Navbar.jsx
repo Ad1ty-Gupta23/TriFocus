@@ -1,40 +1,62 @@
 import React, { useState, useEffect } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import { toast } from "react-toastify";
 
-function Navbar({ isLoggedIn, user, activeSection, handleSectionChange }) {
+function Navbar({ isLoggedIn, user }) {
   const navigate = useNavigate();
+  const location = useLocation();
   const [walletAddress, setWalletAddress] = useState("");
   const [isConnected, setIsConnected] = useState(false);
+  const [role, setRole] = useState(null);
+  const [crisisAlerts, setCrisisAlerts] = useState(0);
+  const [pendingAppointments, setPendingAppointments] = useState(0);
 
-  // Check if wallet is already connected on component mount
+  // Get current active section from URL
+  const getActiveSection = () => {
+    const path = location.pathname;
+    if (path.includes('/journal')) return 'journal';
+    if (path.includes('/meditation')) return 'meditation';
+    if (path.includes('/rewards')) return 'rewards';
+    if (path.includes('/appointments')) return 'appointments';
+    if (path.includes('/crisis')) return 'crisis';
+    if (path.includes('/ai-insights')) return 'ai-insights';
+    if (path.includes('/patient-files')) return 'patient-files';
+    if (path.includes('/earnings')) return 'earnings';
+    if (path.includes('/profile')) return 'profile';
+    return 'dashboard';
+  };
+
+  const activeSection = getActiveSection();
+
   useEffect(() => {
     checkIfWalletIsConnected();
+    const storedRole = localStorage.getItem("role");
+    setRole(storedRole);
+    
+    if (storedRole === "Therapist") {
+      loadTherapistDashboardData();
+    }
   }, []);
 
-  // Check if MetaMask is installed and if an account is already connected
+  const loadTherapistDashboardData = () => {
+    setCrisisAlerts(Math.floor(Math.random() * 3));
+    setPendingAppointments(Math.floor(Math.random() * 5) + 1);
+  };
+
   const checkIfWalletIsConnected = async () => {
     try {
       const { ethereum } = window;
-      if (!ethereum) {
-        console.log("Make sure you have MetaMask installed!");
-        return;
-      }
-
-      // Check if we're authorized to access the user's wallet
+      if (!ethereum) return;
       const accounts = await ethereum.request({ method: "eth_accounts" });
-
       if (accounts.length !== 0) {
-        const account = accounts[0];
-        setWalletAddress(account);
+        setWalletAddress(accounts[0]);
         setIsConnected(true);
       }
     } catch (error) {
-      console.error("Error checking if wallet is connected:", error);
+      console.error("Error checking wallet:", error);
     }
   };
 
-  // Connect wallet function
   const connectWallet = async () => {
     try {
       const { ethereum } = window;
@@ -42,29 +64,21 @@ function Navbar({ isLoggedIn, user, activeSection, handleSectionChange }) {
         toast.error("Please install MetaMask to connect your wallet!");
         return;
       }
-
-      // Request account access
       const accounts = await ethereum.request({ method: "eth_requestAccounts" });
-      const account = accounts[0];
-      setWalletAddress(account);
+      setWalletAddress(accounts[0]);
       setIsConnected(true);
       toast.success("Wallet connected successfully!");
-      
-      // Dispatch custom event for wallet connection
       window.dispatchEvent(new Event("walletConnected"));
     } catch (error) {
-      console.error("Error connecting wallet:", error);
-      toast.error("Failed to connect wallet. Please try again.");
+      console.error("Wallet connect error:", error);
+      toast.error("Failed to connect wallet.");
     }
   };
 
-  // Disconnect wallet function
   const disconnectWallet = () => {
     setWalletAddress("");
     setIsConnected(false);
     toast.info("Wallet disconnected");
-    
-    // Dispatch custom event for wallet disconnection
     window.dispatchEvent(new Event("walletDisconnected"));
   };
 
@@ -72,63 +86,196 @@ function Navbar({ isLoggedIn, user, activeSection, handleSectionChange }) {
     localStorage.removeItem("user");
     localStorage.removeItem("role");
     toast.success("Logged out successfully");
-    window.location.reload(); // Refresh to update state
+    window.location.reload();
   };
 
   return (
     <header className="sticky top-0 z-50 backdrop-blur-md bg-white/80 border-b border-white/20 shadow-sm">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
+
           {/* Logo */}
           <div className="flex items-center">
-            <div className="text-2xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
+            <Link to="/dashboard" className="text-2xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
               TriFocus
-            </div>
+            </Link>
+            {role === "Therapist" && (
+              <span className="ml-2 px-2 py-1 text-xs bg-blue-100 text-blue-800 rounded-full font-medium">
+                Professional
+              </span>
+            )}
           </div>
 
           {/* Navigation */}
-          <nav className="hidden md:flex space-x-8">
-            {["meditation", "mood", "resources"].map((section) => (
-              <button
-                key={section}
-                onClick={() => handleSectionChange(section)}
-                className={`relative px-3 py-2 text-sm font-medium transition-all duration-300 ${
-                  activeSection === section
-                    ? "text-indigo-600"
-                    : "text-gray-600 hover:text-indigo-600"
-                }`}
-              >
-                {section.charAt(0).toUpperCase() + section.slice(1)}
-                {activeSection === section && (
-                  <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-gradient-to-r from-indigo-600 to-purple-600"></div>
-                )}
-              </button>
-            ))}
+          <nav className="hidden lg:flex space-x-1">
+            {/* Volunteer Navigation */}
+            {role === "Volunteer" && (
+              <>
+                <Link
+                  to="/meditation"
+                  className={`px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+                    activeSection === "meditation" 
+                      ? "bg-indigo-100 text-indigo-700" 
+                      : "text-gray-600 hover:text-indigo-600 hover:bg-gray-50"
+                  }`}
+                >
+                  Meditation
+                </Link>
+                <Link
+                  to="/journal"
+                  className={`px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+                    activeSection === "journal" 
+                      ? "bg-indigo-100 text-indigo-700" 
+                      : "text-gray-600 hover:text-indigo-600 hover:bg-gray-50"
+                  }`}
+                >
+                  Journal
+                </Link>
+                <Link
+                  to="/rewards"
+                  className={`px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+                    activeSection === "rewards" 
+                      ? "bg-indigo-100 text-indigo-700" 
+                      : "text-gray-600 hover:text-indigo-600 hover:bg-gray-50"
+                  }`}
+                >
+                  Rewards
+                </Link>
+              </>
+            )}
+
+            {/* Therapist Navigation */}
+            {role === "Therapist" && (
+              <>
+                <Link
+                  to="/crisis"
+                  className={`relative px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+                    activeSection === "crisis" 
+                      ? "bg-red-100 text-red-700" 
+                      : "text-gray-600 hover:text-red-600 hover:bg-red-50"
+                  }`}
+                >
+                  <div className="flex items-center space-x-1">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                    </svg>
+                    <span>Crisis</span>
+                  </div>
+                  {crisisAlerts > 0 && (
+                    <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                      {crisisAlerts}
+                    </span>
+                  )}
+                </Link>
+
+                <Link
+                  to="/appointments"
+                  className={`relative px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+                    activeSection === "appointments" 
+                      ? "bg-indigo-100 text-indigo-700" 
+                      : "text-gray-600 hover:text-indigo-600 hover:bg-gray-50"
+                  }`}
+                >
+                  <div className="flex items-center space-x-1">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    </svg>
+                    <span>Appointments</span>
+                  </div>
+                  {pendingAppointments > 0 && (
+                    <span className="absolute -top-1 -right-1 bg-blue-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                      {pendingAppointments}
+                    </span>
+                  )}
+                </Link>
+
+                <Link
+                  to="/ai-insights"
+                  className={`px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+                    activeSection === "ai-insights" 
+                      ? "bg-indigo-100 text-indigo-700" 
+                      : "text-gray-600 hover:text-indigo-600 hover:bg-gray-50"
+                  }`}
+                >
+                  <div className="flex items-center space-x-1">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+                    </svg>
+                    <span>AI Insights</span>
+                  </div>
+                </Link>
+
+                <Link
+                  to="/patient-files"
+                  className={`px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+                    activeSection === "patient-files" 
+                      ? "bg-indigo-100 text-indigo-700" 
+                      : "text-gray-600 hover:text-indigo-600 hover:bg-gray-50"
+                  }`}
+                >
+                  <div className="flex items-center space-x-1">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                    <span>Patient Files</span>
+                  </div>
+                </Link>
+
+                <Link
+                  to="/earnings"
+                  className={`px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+                    activeSection === "earnings" 
+                      ? "bg-indigo-100 text-indigo-700" 
+                      : "text-gray-600 hover:text-indigo-600 hover:bg-gray-50"
+                  }`}
+                >
+                  <div className="flex items-center space-x-1">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
+                    </svg>
+                    <span>Earnings</span>
+                  </div>
+                </Link>
+
+                <Link
+                  to="/profile"
+                  className={`px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+                    activeSection === "profile" 
+                      ? "bg-indigo-100 text-indigo-700" 
+                      : "text-gray-600 hover:text-indigo-600 hover:bg-gray-50"
+                  }`}
+                >
+                  <div className="flex items-center space-x-1">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                    </svg>
+                    <span>Profile</span>
+                  </div>
+                </Link>
+              </>
+            )}
           </nav>
 
-          {/* Wallet Connection */}
+          {/* Wallet Section */}
           <div className="flex items-center">
             {isConnected ? (
               <div className="flex items-center space-x-2 px-3 py-2 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-lg">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
                 <span className="text-xs font-medium">
                   {walletAddress.substring(0, 6)}...{walletAddress.substring(walletAddress.length - 4)}
                 </span>
-                <button 
-                  onClick={disconnectWallet}
-                  className="ml-2 text-xs underline hover:no-underline"
-                >
+                <button onClick={disconnectWallet} className="ml-2 text-xs underline hover:no-underline">
                   Disconnect
                 </button>
               </div>
             ) : (
-              <button 
+              <button
                 onClick={connectWallet}
                 className="flex items-center space-x-2 px-4 py-2 text-sm font-medium bg-gradient-to-r from-orange-500 to-amber-600 text-white rounded-lg hover:from-orange-600 hover:to-amber-700 transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-xl"
               >
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
                 </svg>
                 <span>Connect Wallet</span>
@@ -140,14 +287,21 @@ function Navbar({ isLoggedIn, user, activeSection, handleSectionChange }) {
           <div className="flex items-center space-x-4 ml-4">
             {isLoggedIn ? (
               <>
-                <span className="text-sm text-gray-600">Hello, {user?.username}</span>
-                <button 
-                  onClick={() => navigate("/pokemon")} 
-                  className="px-4 py-2 text-sm font-medium text-indigo-600 hover:text-indigo-700 transition-colors"
-                >
-                  Fun Games
-                </button>
-                <button 
+                <span className="text-sm text-gray-600">
+                  Hello, {user?.username}
+                  {role === "Therapist" && (
+                    <span className="ml-1 text-xs text-indigo-600 font-medium">Dr.</span>
+                  )}
+                </span>
+                {role === "Volunteer" && (
+                  <button 
+                    onClick={() => navigate("/pokemon")} 
+                    className="px-4 py-2 text-sm font-medium text-indigo-600 hover:text-indigo-700 transition-colors"
+                  >
+                    Fun Games
+                  </button>
+                )}
+                <button
                   onClick={handleLogout}
                   className="px-4 py-2 text-sm font-medium bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg hover:from-indigo-700 hover:to-purple-700 transition-all duration-300 transform hover:scale-105"
                 >
@@ -156,21 +310,16 @@ function Navbar({ isLoggedIn, user, activeSection, handleSectionChange }) {
               </>
             ) : (
               <>
-                <Link 
-                  to="/login" 
-                  className="px-4 py-2 text-sm font-medium text-gray-600 hover:text-indigo-600 transition-colors"
-                >
+                <Link to="/login" className="px-4 py-2 text-sm font-medium text-gray-600 hover:text-indigo-600 transition-colors">
                   Login
                 </Link>
-                <Link 
-                  to="/register" 
-                  className="px-6 py-2 text-sm font-medium bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg hover:from-indigo-700 hover:to-purple-700 transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-xl"
-                >
+                <Link to="/register" className="px-6 py-2 text-sm font-medium bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg hover:from-indigo-700 hover:to-purple-700 transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-xl">
                   Sign Up
                 </Link>
               </>
             )}
           </div>
+
         </div>
       </div>
     </header>
