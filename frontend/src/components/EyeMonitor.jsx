@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-
+import Navbar from './Navbar';
 const EyeDetectionTimer = () => {
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
@@ -205,7 +205,10 @@ const EyeDetectionTimer = () => {
   };
 
   return (
+    <>
+    <Navbar />
     <div className="flex flex-col items-center p-6 bg-gray-100 min-h-screen">
+
       <h1 className="text-3xl font-bold mb-6 text-gray-800">
         Eye Detection Timer with Face Mesh
       </h1>
@@ -272,6 +275,7 @@ const EyeDetectionTimer = () => {
         </ul>
       </div>
     </div>
+    </>
   );
 };
 

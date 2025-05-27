@@ -155,16 +155,7 @@ function Home() {
                 description: "AI-curated meditation journeys with real-time biometric verification",
                 gradient: colors.primary
               },
-              {
-                icon: (
-                  <svg className="w-12 h-12 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                ),
-                title: "Focus Timer",
-                description: "Customizable meditation durations with eye-tracking validation",
-                gradient: colors.secondary
-              },
+              
               {
                 icon: (
                   <svg className="w-12 h-12 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">

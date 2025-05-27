@@ -9,6 +9,7 @@ import Home from './pages/home'
 import EyeDetectionTimer from './components/EyeMonitor'
 import Game from './pages/game1'
 import Chatbot from './components/Chatbot'
+import PokemonBattle from "./brawl/PokemonBattle.jsx";
 function App() {
   const [count, setCount] = useState(0)
 
@@ -20,6 +21,8 @@ function App() {
         <Route path="/" element={<Home />}></Route>
         <Route path="/meditate" element={<EyeDetectionTimer />}></Route>
         <Route path="/game" element={<Game />}></Route>
+        <Route path="/pokemon" element={<PokemonBattle />}></Route>
+        
       </Routes>
     </BrowserRouter>
   )

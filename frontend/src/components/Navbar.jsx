@@ -142,10 +142,10 @@ function Navbar({ isLoggedIn, user, activeSection, handleSectionChange }) {
               <>
                 <span className="text-sm text-gray-600">Hello, {user?.username}</span>
                 <button 
-                  onClick={() => navigate("/dashboard")} 
+                  onClick={() => navigate("/pokemon")} 
                   className="px-4 py-2 text-sm font-medium text-indigo-600 hover:text-indigo-700 transition-colors"
                 >
-                  Dashboard
+                  Fun Games
                 </button>
                 <button 
                   onClick={handleLogout}
