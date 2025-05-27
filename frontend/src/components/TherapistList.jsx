@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
-import { Users, Mail, UserCheck, AlertCircle, Loader2 } from "lucide-react";
-import Navbar from "./Navbar";
+import { Mail, UserCheck, AlertCircle, Loader2 } from "lucide-react";
+
 const TherapistList = () => {
   const [therapists, setTherapists] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -11,15 +11,11 @@ const TherapistList = () => {
       try {
         setLoading(true);
         setError(null);
-        
-        // Use your actual API endpoint - note the correct path structure
         const response = await fetch("http://localhost:5000/api/user/therapists");
         if (!response.ok) {
           throw new Error('Network response was not ok');
         }
         const data = await response.json();
-        
-        // Since your getTherapists controller should return only therapists
         setTherapists(data);
       } catch (err) {
         console.error("Failed to fetch therapists:", err);
@@ -63,18 +59,10 @@ const TherapistList = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-900">
-        <header className="bg-gradient-to-r from-purple-800/50 to-pink-800/50 backdrop-blur-sm text-white py-12">
-          <div className="max-w-6xl mx-auto px-6 text-center">
-            <h1 className="text-4xl font-bold mb-4">Our Professional Therapists</h1>
-            <p className="text-white/80 text-lg">Connect with qualified mental health professionals</p>
-          </div>
-        </header>
-        <div className="max-w-6xl mx-auto px-6 py-12">
-          <div className="flex items-center justify-center space-x-3 text-white">
-            <Loader2 className="w-8 h-8 animate-spin" />
-            <span className="text-xl">Loading therapists...</span>
-          </div>
+      <div className="text-center py-16">
+        <div className="flex items-center justify-center space-x-3 text-white">
+          <Loader2 className="w-8 h-8 animate-spin" />
+          <span className="text-xl">Loading therapists...</span>
         </div>
       </div>
     );
@@ -82,62 +70,40 @@ const TherapistList = () => {
 
   if (error) {
     return (
-      <div className="max-h-screen max-w-screen bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-900">
-        <header className="bg-gradient-to-r from-purple-800/50 to-pink-800/50 backdrop-blur-sm text-white py-12">
-          <div className="max-w-6xl mx-auto px-6 text-center">
-            <h1 className="text-4xl font-bold mb-4">Community Support Team</h1>
-            <p className="text-white/80 text-lg">Meet our Volunteers and Therapists</p>
-          </div>
-        </header>
-        <div className="max-w-6xl mx-auto px-6 py-12">
-          <div className="bg-red-500/20 backdrop-blur-lg border border-red-400/30 rounded-xl p-6 flex items-center space-x-4">
-            <AlertCircle className="w-8 h-8 text-red-300" />
-            <div>
-              <h3 className="font-semibold text-red-200 text-lg">Error Loading Data</h3>
-              <p className="text-red-300">{error}</p>
-            </div>
-          </div>
+      <div className="bg-red-500/20 backdrop-blur-lg border border-red-400/30 rounded-xl p-6 flex items-center space-x-4">
+        <AlertCircle className="w-8 h-8 text-red-300" />
+        <div>
+          <h3 className="font-semibold text-red-200 text-lg">Error Loading Data</h3>
+          <p className="text-red-300">{error}</p>
         </div>
       </div>
     );
   }
 
   return (
-    <>
-    <Navbar/>
-    <div className="min-h-screen bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-900">
-      <header className="bg-gradient-to-r from-purple-800/50 to-pink-800/50 backdrop-blur-sm text-white py-12">
-        <div className="max-w-6xl mx-auto px-6 text-center">
-          <h1 className="text-4xl font-bold mb-4">Community Support Team</h1>
-          <p className="text-white/80 text-lg">Meet our Volunteers and Therapists</p>
+    <div className="max-w-6xl mx-auto px-6 py-12">
+      <SectionHeader 
+        title="Available Therapists" 
+        count={therapists.length}
+        icon={UserCheck}
+      />
+      {therapists.length > 0 ? (
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+          {therapists.map((therapist) => (
+            <UserCard 
+              key={therapist._id} 
+              user={therapist} 
+              roleColor="bg-gradient-to-r from-purple-500 to-pink-500"
+            />
+          ))}
         </div>
-      </header>
-
-      <div className="max-w-6xl mx-auto px-6 py-12">
-        <SectionHeader 
-          title="Available Therapists" 
-          count={therapists.length}
-          icon={UserCheck}
-        />
-        {therapists.length > 0 ? (
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {therapists.map((therapist) => (
-              <UserCard 
-                key={therapist._id} 
-                user={therapist} 
-                roleColor="bg-gradient-to-r from-purple-500 to-pink-500"
-              />
-            ))}
-          </div>
-        ) : (
-          <div className="text-center py-16 text-white/70">
-            <UserCheck className="w-16 h-16 mx-auto mb-6 text-white/40" />
-            <p className="text-xl">No therapists available at the moment</p>
-          </div>
-        )}
-      </div>
+      ) : (
+        <div className="text-center py-16 text-white/70">
+          <UserCheck className="w-16 h-16 mx-auto mb-6 text-white/40" />
+          <p className="text-xl">No therapists available at the moment</p>
+        </div>
+      )}
     </div>
-    </>
   );
 };
 
