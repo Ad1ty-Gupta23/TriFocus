@@ -268,6 +268,16 @@ const Journal = () => {
     priority: 'medium',
     category: 'wellness'
   });
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [user, setUser] = useState(null);
+
+  // After successful login:
+  const handleLogin = (userData) => {
+    setIsLoggedIn(true);
+    setUser(userData);
+    localStorage.setItem("user", JSON.stringify(userData));
+  };
+
 
   const analyzeSentiment = async (text) => {
     setIsAnalyzing(true);
@@ -507,7 +517,7 @@ useEffect(() => {
 
   return (
     <>
-    <Navbar />
+    <Navbar isLoggedIn={isLoggedIn} user={user} />
     <div className="max-w-6xl mx-auto p-6 bg-gradient-to-br from-blue-50 to-indigo-100 min-h-screen">
       {/* Header Stats */}
       <div className="bg-white rounded-2xl shadow-lg p-6 mb-8">

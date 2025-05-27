@@ -10,6 +10,7 @@ import PokemonBattle from "./brawl/PokemonBattle.jsx";
 import Journal from './components/Journal';
 import TherapistList from './components/TherapistList';
 import GamesHub from './pages/Games.jsx'
+import CosmicDefender from './components/CosmicDefender.jsx'
 
 function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -39,6 +40,7 @@ function App() {
             path="/journal" 
             element={ <Journal user={user} />} 
           />
+          <Route path="/cosmic" element={<CosmicDefender />}></Route>
         
       </Routes>
     </BrowserRouter>

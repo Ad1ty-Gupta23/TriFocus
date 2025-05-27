@@ -2,12 +2,13 @@ import React, { useState, useEffect } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { toast } from "react-toastify";
 
-function Navbar({ isLoggedIn: propIsLoggedIn, user }) {
+function Navbar({ isLoggedIn: propIsLoggedIn, user: propUser }) {
   const navigate = useNavigate();
   const location = useLocation();
   const [walletAddress, setWalletAddress] = useState("");
   const [isConnected, setIsConnected] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(propIsLoggedIn || false);
+  const [user, setUser] = useState(propUser || null);
   const [isWalletConnected, setIsWalletConnected] = useState(false);
   const [role, setRole] = useState(null);
   const [crisisAlerts, setCrisisAlerts] = useState(0);
@@ -25,6 +26,7 @@ function Navbar({ isLoggedIn: propIsLoggedIn, user }) {
     if (path.includes('/patient-files')) return 'patient-files';
     if (path.includes('/earnings')) return 'earnings';
     if (path.includes('/profile')) return 'profile';
+    if (path.includes('/games')) return 'games';
     return 'dashboard';
   };
 
@@ -35,13 +37,22 @@ function Navbar({ isLoggedIn: propIsLoggedIn, user }) {
     const storedRole = localStorage.getItem("role");
     const storedUser = localStorage.getItem("user");
     
+    if (storedUser) {
+      try {
+        const parsedUser = JSON.parse(storedUser);
+        setUser(parsedUser);
+      } catch (e) {
+        console.error("Error parsing user data:", e);
+      }
+    }
+    
     setRole(storedRole);
     setIsLoggedIn(!!storedUser || propIsLoggedIn);
     
     if (storedRole === "Therapist") {
       loadTherapistDashboardData();
     }
-  }, [propIsLoggedIn]);
+  }, [propIsLoggedIn, propUser]);
 
   // Update wallet connection state when wallet status changes
   useEffect(() => {
@@ -118,8 +129,21 @@ function Navbar({ isLoggedIn: propIsLoggedIn, user }) {
     localStorage.removeItem("user");
     localStorage.removeItem("role");
     setIsLoggedIn(false);
+    setUser(null);
     toast.success("Logged out successfully");
-    window.location.reload();
+    navigate("/login");
+  };
+
+  // User display name logic
+  const getDisplayName = () => {
+    if (!user) return "";
+    
+    // Check different possible username fields
+    if (user.username) return user.username;
+    if (user.name) return user.name;
+    if (user.email) return user.email.split("@")[0];
+    
+    return "User";
   };
 
   return (
@@ -172,7 +196,7 @@ function Navbar({ isLoggedIn: propIsLoggedIn, user }) {
                       : "text-gray-600 hover:text-indigo-600 hover:bg-gray-50"
                   }`}
                 >
-                Redeem
+                  Redeem
                 </Link>
               </>
             )}
@@ -287,6 +311,20 @@ function Navbar({ isLoggedIn: propIsLoggedIn, user }) {
                 </Link>
               </>
             )}
+
+            {/* Common navigation items for all roles */}
+            {isLoggedIn && (
+              <Link
+                to="/games"
+                className={`px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+                  activeSection === "games" 
+                    ? "bg-indigo-100 text-indigo-700" 
+                    : "text-gray-600 hover:text-indigo-600 hover:bg-gray-50"
+                }`}
+              >
+                Fun Games
+              </Link>
+            )}
           </nav>
 
           {/* Wallet Section */}
@@ -320,20 +358,26 @@ function Navbar({ isLoggedIn: propIsLoggedIn, user }) {
           <div className="flex items-center space-x-4 ml-4">
             {isLoggedIn ? (
               <>
-                <span className="text-sm text-gray-600">
-                  Hello, {user?.username}
-                  {role === "Therapist" && (
-                    <span className="ml-1 text-xs text-indigo-600 font-medium">Dr.</span>
-                  )}
-                </span>
-                {role === "Volunteer" && (
-                  <button 
-                    onClick={() => navigate("/games")} 
-                    className="px-4 py-2 text-sm font-medium text-indigo-600 hover:text-indigo-700 transition-colors"
-                  >
-                    Fun Games
-                  </button>
-                )}
+                <div className="flex items-center space-x-2">
+                  <div className="relative">
+                    <div className="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 font-medium">
+                      {getDisplayName().charAt(0).toUpperCase()}
+                    </div>
+                    {role === "Therapist" && (
+                      <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-blue-500 rounded-full flex items-center justify-center">
+                        <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 24 24">
+                          <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z" />
+                        </svg>
+                      </div>
+                    )}
+                  </div>
+                  <span className="text-sm text-gray-600 font-medium">
+                    {getDisplayName()}
+                    {role === "Therapist" && (
+                      <span className="ml-1 text-xs text-indigo-600 font-medium">Dr.</span>
+                    )}
+                  </span>
+                </div>
                 <button
                   onClick={handleLogout}
                   className="px-4 py-2 text-sm font-medium bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg hover:from-indigo-700 hover:to-purple-700 transition-all duration-300 transform hover:scale-105"
@@ -352,7 +396,6 @@ function Navbar({ isLoggedIn: propIsLoggedIn, user }) {
               </>
             )}
           </div>
-
         </div>
       </div>
     </header>

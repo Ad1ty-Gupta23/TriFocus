@@ -51,10 +51,10 @@ const GAMES_DATA = [
     tags: ['Action', 'Shooter', 'Sci-Fi', 'Power-ups'],
     gradient: 'from-purple-500 to-blue-600',
     icon: '🚀',
-    route: null,
+    route: 'cosmic',
     features: ['Multiple Weapons', 'Boss Battles', 'Power-ups', 'Endless Mode'],
     screenshots: ['🚀👾🌟', '💥⚡🎆', '🛸🌍🔫'],
-    isNew: false,
+    isNew: true,
     isPopular: false
   },
   {
@@ -121,6 +121,16 @@ export default function GamesHub() {
   const [featuredGame, setFeaturedGame] = useState(GAMES_DATA[0]);
   const [showFilters, setShowFilters] = useState(false);
   const [sortBy, setSortBy] = useState('popular');
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [user, setUser] = useState(null);
+
+  // After successful login:
+  const handleLogin = (userData) => {
+    setIsLoggedIn(true);
+    setUser(userData);
+    localStorage.setItem("user", JSON.stringify(userData));
+  };
+
 
   // Rotate featured game between available games
   useEffect(() => {
@@ -174,7 +184,7 @@ export default function GamesHub() {
 
   return (
     <>
-    <Navbar />
+    <Navbar isLoggedIn={isLoggedIn} user={user} />
     <div className="min-h-screen bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-900">
       {/* Animated Background Elements */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none">
