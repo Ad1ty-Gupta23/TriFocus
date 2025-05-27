@@ -16,6 +16,7 @@ import MedicalReportAnalyzer from './components/DiseaseDetection.jsx'
 import MeditationHome from './pages/MediHome.jsx'
 import RedeemStore from './components/Store.jsx'
 import CombinedStorePage from './pages/CombinedStorePage.jsx'
+import { HabitBlockchainProvider } from './context/HabitBlockchainContext.jsx';
 
 function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -31,6 +32,8 @@ function App() {
   }, []);
 
   return (
+    <HabitBlockchainProvider>
+   
     <BrowserRouter>
       <Routes>
         <Route path="/login" element={<Login />}></Route>
@@ -52,6 +55,7 @@ function App() {
         <Route path='/redeem' element={<CombinedStorePage />}></Route>
       </Routes>
     </BrowserRouter>
+    </HabitBlockchainProvider>
   )
 }
 
