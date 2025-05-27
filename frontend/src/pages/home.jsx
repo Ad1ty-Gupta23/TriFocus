@@ -55,7 +55,7 @@ function Home() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 font-sans antialiased">
+    <div className="max-h-screen max-w-screen bg-gray-50 font-sans antialiased">
       {/* Modern Navbar */}
       <Navbar 
         isLoggedIn={isLoggedIn}
@@ -66,7 +66,7 @@ function Home() {
       />
 
       {/* Hero Section */}
-      <section className="relative overflow-hidden bg-gradient-to-br from-indigo-900 to-purple-800 text-white">
+      <section className="relative overflow-hidden bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-900 text-white">
         <div className="absolute inset-0 opacity-10">
           <div className="absolute top-1/4 left-1/4 w-64 h-64 bg-indigo-300 rounded-full filter blur-3xl opacity-20 animate-pulse"></div>
           <div className="absolute bottom-1/3 right-1/3 w-80 h-80 bg-purple-300 rounded-full filter blur-3xl opacity-20 animate-pulse delay-1000"></div>

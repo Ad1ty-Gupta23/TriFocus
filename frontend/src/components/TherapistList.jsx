@@ -82,7 +82,7 @@ const TherapistList = () => {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-900">
+      <div className="max-h-screen max-w-screen bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-900">
         <header className="bg-gradient-to-r from-purple-800/50 to-pink-800/50 backdrop-blur-sm text-white py-12">
           <div className="max-w-6xl mx-auto px-6 text-center">
             <h1 className="text-4xl font-bold mb-4">Community Support Team</h1>
