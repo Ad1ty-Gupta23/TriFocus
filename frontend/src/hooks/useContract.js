@@ -1,7 +1,7 @@
 // src/hooks/useContract.js
 import { useState, useEffect } from 'react';
 import { ethers } from 'ethers';
-import { CONTRACT_ADDRESS, CONTRACT_ABI } from '../contracts/contractConfig';
+import {  CONTRACT_ADDRESS  , HABIT_STAKING_ABI } from '../context/HabitBlockchainContext';
 
 export const useContract = () => {
   const [contract, setContract] = useState(null);
@@ -20,7 +20,7 @@ export const useContract = () => {
         
         const contractInstance = new ethers.Contract(
           CONTRACT_ADDRESS,
-          CONTRACT_ABI,
+          HABIT_STAKING_ABI,
           web3Signer
         );
 

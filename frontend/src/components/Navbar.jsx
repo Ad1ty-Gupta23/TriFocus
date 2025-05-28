@@ -6,17 +6,20 @@ import { useHabitBlockchain } from "../context/HabitBlockchainContext";
 function Navbar({ isLoggedIn: propIsLoggedIn, user: propUser }) {
   const navigate = useNavigate();
   const location = useLocation();
-  const [walletAddress, setWalletAddress] = useState("");
-  const [isConnected, setIsConnected] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(propIsLoggedIn || false);
   const [user, setUser] = useState(propUser || null);
-  const [isWalletConnected, setIsWalletConnected] = useState(false);
   const [role, setRole] = useState(null);
   const [crisisAlerts, setCrisisAlerts] = useState(0);
   const [pendingAppointments, setPendingAppointments] = useState(0);
 
-  // Get blockchain context for token display
-  const { account, userStats, fetchUserStats } = useHabitBlockchain();
+  // Get blockchain context - this replaces the manual wallet connection logic
+  const { 
+    account, 
+    connectWallet, 
+    userStats, 
+    loading,
+    fetchUserStats 
+  } = useHabitBlockchain();
 
   // Get current active section from URL
   const getActiveSection = () => {
@@ -37,7 +40,6 @@ function Navbar({ isLoggedIn: propIsLoggedIn, user: propUser }) {
   const activeSection = getActiveSection();
 
   useEffect(() => {
-    checkIfWalletIsConnected();
     const storedRole = localStorage.getItem("role");
     const storedUser = localStorage.getItem("user");
     
@@ -65,75 +67,20 @@ function Navbar({ isLoggedIn: propIsLoggedIn, user: propUser }) {
     }
   }, [account, fetchUserStats]);
 
-  // Update wallet connection state when wallet status changes
-  useEffect(() => {
-    setIsWalletConnected(isConnected);
-  }, [isConnected]);
-
-  // Listen for wallet connection events
-  useEffect(() => {
-    const handleWalletConnected = () => {
-      setIsWalletConnected(true);
-    };
-
-    const handleWalletDisconnected = () => {
-      setIsWalletConnected(false);
-    };
-
-    window.addEventListener("walletConnected", handleWalletConnected);
-    window.addEventListener("walletDisconnected", handleWalletDisconnected);
-
-    return () => {
-      window.removeEventListener("walletConnected", handleWalletConnected);
-      window.removeEventListener("walletDisconnected", handleWalletDisconnected);
-    };
-  }, []);
-
   const loadTherapistDashboardData = () => {
     setCrisisAlerts(Math.floor(Math.random() * 3));
     setPendingAppointments(Math.floor(Math.random() * 5) + 1);
   };
 
-  const checkIfWalletIsConnected = async () => {
+  // Updated wallet connection handler using the blockchain context
+  const handleConnectWallet = async () => {
     try {
-      const { ethereum } = window;
-      if (!ethereum) return;
-      const accounts = await ethereum.request({ method: "eth_accounts" });
-      if (accounts.length !== 0) {
-        setWalletAddress(accounts[0]);
-        setIsConnected(true);
-        setIsWalletConnected(true);
-      }
-    } catch (error) {
-      console.error("Error checking wallet:", error);
-    }
-  };
-
-  const connectWallet = async () => {
-    try {
-      const { ethereum } = window;
-      if (!ethereum) {
-        toast.error("Please install MetaMask to connect your wallet!");
-        return;
-      }
-      const accounts = await ethereum.request({ method: "eth_requestAccounts" });
-      setWalletAddress(accounts[0]);
-      setIsConnected(true);
-      setIsWalletConnected(true);
+      await connectWallet();
       toast.success("Wallet connected successfully!");
-      window.dispatchEvent(new Event("walletConnected"));
     } catch (error) {
       console.error("Wallet connect error:", error);
       toast.error("Failed to connect wallet.");
     }
-  };
-
-  const disconnectWallet = () => {
-    setWalletAddress("");
-    setIsConnected(false);
-    setIsWalletConnected(false);
-    toast.info("Wallet disconnected");
-    window.dispatchEvent(new Event("walletDisconnected"));
   };
 
   const handleLogout = () => {
@@ -257,10 +204,8 @@ function Navbar({ isLoggedIn: propIsLoggedIn, user: propUser }) {
                   )}
                 </Link>
 
-                
-
                 <Link
-                  to="/patient-files"
+                  to="/upload"
                   className={`px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
                     activeSection === "patient-files" 
                       ? "bg-indigo-100 text-indigo-700" 
@@ -311,22 +256,21 @@ function Navbar({ isLoggedIn: propIsLoggedIn, user: propUser }) {
 
             {/* Common navigation items for all roles */}
             {isLoggedIn && role === "Volunteer" && (
-  <Link
-    to="/games"
-    className={`px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
-      activeSection === "games"
-        ? "bg-indigo-100 text-indigo-700"
-        : "text-gray-600 hover:text-indigo-600 hover:bg-gray-50"
-    }`}
-  >
-    Fun Games
-  </Link>
-)}
-
+              <Link
+                to="/games"
+                className={`px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+                  activeSection === "games"
+                    ? "bg-indigo-100 text-indigo-700"
+                    : "text-gray-600 hover:text-indigo-600 hover:bg-gray-50"
+                }`}
+              >
+                Fun Games
+              </Link>
+            )}
           </nav>
 
-          {/* Token Display */}
-          {isWalletConnected && (
+          {/* Token Display - Updated to use blockchain context */}
+          {account && (
             <div className="flex items-center mr-4">
               <div className="flex items-center space-x-2 px-3 py-2 bg-gradient-to-r from-purple-500 to-indigo-600 text-white rounded-lg shadow-md">
                 <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -340,29 +284,39 @@ function Navbar({ isLoggedIn: propIsLoggedIn, user: propUser }) {
             </div>
           )}
 
-          {/* Wallet Section */}
+          {/* Wallet Section - Updated to use blockchain context */}
           <div className="flex items-center">
-            {isWalletConnected ? (
+            {account ? (
               <div className="flex items-center space-x-2 px-3 py-2 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-lg">
                 <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
                 <span className="text-xs font-medium">
-                  {walletAddress.substring(0, 6)}...{walletAddress.substring(walletAddress.length - 4)}
+                  {account.slice(0, 6)}...{account.slice(-4)}
                 </span>
-                <button onClick={disconnectWallet} className="ml-2 text-xs underline hover:no-underline">
-                  Disconnect
-                </button>
               </div>
             ) : (
               <button
-                onClick={connectWallet}
-                className="flex items-center space-x-2 px-4 py-2 text-sm font-medium bg-gradient-to-r from-orange-500 to-amber-600 text-white rounded-lg hover:from-orange-600 hover:to-amber-700 transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-xl"
+                onClick={handleConnectWallet}
+                disabled={loading}
+                className="flex items-center space-x-2 px-4 py-2 text-sm font-medium bg-gradient-to-r from-orange-500 to-amber-600 text-white rounded-lg hover:from-orange-600 hover:to-amber-700 transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
               >
-                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
-                </svg>
-                <span>Connect Wallet</span>
+                {loading ? (
+                  <>
+                    <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    <span>Connecting...</span>
+                  </>
+                ) : (
+                  <>
+                    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
+                    </svg>
+                    <span>Connect Wallet</span>
+                  </>
+                )}
               </button>
             )}
           </div>

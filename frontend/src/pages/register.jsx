@@ -4,9 +4,19 @@ import { Link, useNavigate } from "react-router-dom";
 import styled, { keyframes } from "styled-components";
 import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
+import { useHabitBlockchain } from "../context/HabitBlockchainContext";
 
 function Register() {
   const navigate = useNavigate();
+  const {
+    isConnected,
+    connectWallet,
+    stakeTokens,
+    registerTherapist,
+    isLoading: blockchainLoading,
+    error: blockchainError
+  } = useHabitBlockchain();
+
   const [values, setValues] = useState({
     username: "",
     email: "",
@@ -14,11 +24,28 @@ function Register() {
     confirmPassword: "",
     userType: "Volunteer",
   });
+  
+  // Blockchain-specific form values
+  const [blockchainValues, setBlockchainValues] = useState({
+    stakeAmount: "",
+    therapistName: "",
+    enableBlockchain: false
+  });
+  
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [currentStep, setCurrentStep] = useState(1); // 1: Basic Info, 2: Blockchain Setup
 
   const handleChange = (event) => {
     setValues({ ...values, [event.target.name]: event.target.value });
+  };
+
+  const handleBlockchainChange = (event) => {
+    const { name, value, type, checked } = event.target;
+    setBlockchainValues({
+      ...blockchainValues,
+      [name]: type === 'checkbox' ? checked : value
+    });
   };
 
   const validateForm = () => {
@@ -46,22 +73,90 @@ function Register() {
     return true;
   };
 
-  const handleSubmit = async (e) => {
+  const validateBlockchainForm = () => {
+    if (blockchainValues.enableBlockchain) {
+      if (!isConnected) {
+        setError("Please connect your wallet first");
+        return false;
+      }
+
+      if (blockchainValues.stakeAmount && (parseFloat(blockchainValues.stakeAmount) < 0.01 || parseFloat(blockchainValues.stakeAmount) > 1000000)) {
+        setError("Stake amount must be between 0.01 and 1,000,000 tokens");
+        return false;
+      }
+
+      if (values.userType === "Therapist" && !blockchainValues.therapistName.trim()) {
+        setError("Therapist name is required for blockchain registration");
+        return false;
+      }
+    }
+
+    return true;
+  };
+
+  const handleBasicInfoSubmit = async (e) => {
     e.preventDefault();
-    setIsLoading(true);
     setError("");
 
     if (!validateForm()) {
-      setIsLoading(false);
       return;
     }
 
+    // Move to blockchain setup step
+    setCurrentStep(2);
+  };
+
+  const handleBlockchainSetup = async () => {
+    if (!blockchainValues.enableBlockchain) {
+      // Skip blockchain setup and proceed with traditional registration
+      await completeRegistration();
+      return;
+    }
+
+    if (!validateBlockchainForm()) {
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      // Handle staking if amount is provided
+      if (blockchainValues.stakeAmount && parseFloat(blockchainValues.stakeAmount) > 0) {
+        toast.info("Processing token staking...");
+        const stakeTxHash = await stakeTokens(parseFloat(blockchainValues.stakeAmount));
+        toast.success(`Tokens staked successfully! Transaction: ${stakeTxHash.slice(0, 10)}...`);
+      }
+
+      // Handle therapist registration if user is a therapist
+      if (values.userType === "Therapist" && blockchainValues.therapistName.trim()) {
+        toast.info("Registering as therapist on blockchain...");
+        const therapistTxHash = await registerTherapist(blockchainValues.therapistName.trim());
+        toast.success(`Therapist registered successfully! Transaction: ${therapistTxHash.slice(0, 10)}...`);
+      }
+
+      // Complete traditional registration
+      await completeRegistration();
+    } catch (err) {
+      console.error("Blockchain setup error:", err);
+      setError(err.message || "Blockchain setup failed. Please try again.");
+      toast.error(err.message || "Blockchain setup failed");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const completeRegistration = async () => {
+    setIsLoading(true);
     try {
       const { confirmPassword, ...userData } = values;
       
       const res = await axios.post(
         "http://localhost:5000/api/user/register",
-        userData
+        {
+          ...userData,
+          blockchainEnabled: blockchainValues.enableBlockchain,
+          initialStake: blockchainValues.stakeAmount || "0",
+          therapistName: blockchainValues.therapistName || ""
+        }
       );
 
       if (res.status === 201) {
@@ -80,6 +175,20 @@ function Register() {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleWalletConnect = async () => {
+    try {
+      await connectWallet();
+      toast.success("Wallet connected successfully!");
+    } catch (err) {
+      toast.error("Failed to connect wallet");
+    }
+  };
+
+  const goBackToBasicInfo = () => {
+    setCurrentStep(1);
+    setError("");
   };
 
   return (
@@ -126,98 +235,217 @@ function Register() {
           <LogoSection>
             <LogoIcon>✦</LogoIcon>
             <BrandName>TriFocus</BrandName>
-            <Subtitle>Create your account</Subtitle>
+            <Subtitle>
+              {currentStep === 1 ? "Create your account" : "Blockchain Setup (Optional)"}
+            </Subtitle>
           </LogoSection>
 
+          <StepIndicator>
+            <Step active={currentStep === 1} completed={currentStep > 1}>1</Step>
+            <StepLine active={currentStep > 1} />
+            <Step active={currentStep === 2}>2</Step>
+          </StepIndicator>
+
           {error && <ErrorMessage>{error}</ErrorMessage>}
+          {blockchainError && <ErrorMessage>{blockchainError}</ErrorMessage>}
           
-          <Form onSubmit={handleSubmit}>
-            <InputRow>
-              <InputGroup>
-                <InputWrapper>
-                  <UserIcon>👤</UserIcon>
-                  <StyledInput
-                    type="text"
-                    name="username"
-                    placeholder="Username"
-                    value={values.username}
-                    onChange={handleChange}
-                    required
-                  />
-                </InputWrapper>
-              </InputGroup>
+          {currentStep === 1 ? (
+            <Form onSubmit={handleBasicInfoSubmit}>
+              <InputRow>
+                <InputGroup>
+                  <InputWrapper>
+                    <UserIcon>👤</UserIcon>
+                    <StyledInput
+                      type="text"
+                      name="username"
+                      placeholder="Username"
+                      value={values.username}
+                      onChange={handleChange}
+                      required
+                    />
+                  </InputWrapper>
+                </InputGroup>
+                
+                <InputGroup>
+                  <InputWrapper>
+                    <EmailIcon>📧</EmailIcon>
+                    <StyledInput
+                      type="email"
+                      name="email"
+                      placeholder="Email address"
+                      value={values.email}
+                      onChange={handleChange}
+                      required
+                    />
+                  </InputWrapper>
+                </InputGroup>
+              </InputRow>
+              
+              <InputRow>
+                <InputGroup>
+                  <InputWrapper>
+                    <LockIcon>🔒</LockIcon>
+                    <StyledInput
+                      type="password"
+                      name="password"
+                      placeholder="Password (8+ chars)"
+                      value={values.password}
+                      onChange={handleChange}
+                      required
+                    />
+                  </InputWrapper>
+                </InputGroup>
+                
+                <InputGroup>
+                  <InputWrapper>
+                    <CheckIcon>✓</CheckIcon>
+                    <StyledInput
+                      type="password"
+                      name="confirmPassword"
+                      placeholder="Confirm password"
+                      value={values.confirmPassword}
+                      onChange={handleChange}
+                      required
+                    />
+                  </InputWrapper>
+                </InputGroup>
+              </InputRow>
               
               <InputGroup>
-                <InputWrapper>
-                  <EmailIcon>📧</EmailIcon>
-                  <StyledInput
-                    type="email"
-                    name="email"
-                    placeholder="Email address"
-                    value={values.email}
+                <SelectWrapper>
+                  <RoleIcon>🏷️</RoleIcon>
+                  <StyledSelect
+                    name="userType"
+                    value={values.userType}
                     onChange={handleChange}
                     required
-                  />
-                </InputWrapper>
-              </InputGroup>
-            </InputRow>
-            
-            <InputRow>
-              <InputGroup>
-                <InputWrapper>
-                  <LockIcon>🔒</LockIcon>
-                  <StyledInput
-                    type="password"
-                    name="password"
-                    placeholder="Password (8+ chars)"
-                    value={values.password}
-                    onChange={handleChange}
-                    required
-                  />
-                </InputWrapper>
+                  >
+                    <option value="Volunteer">🤝 Volunteer</option>
+                    <option value="Therapist">👨‍⚕️ Therapist</option>
+                  </StyledSelect>
+                </SelectWrapper>
               </InputGroup>
               
-              <InputGroup>
-                <InputWrapper>
-                  <CheckIcon>✓</CheckIcon>
-                  <StyledInput
-                    type="password"
-                    name="confirmPassword"
-                    placeholder="Confirm password"
-                    value={values.confirmPassword}
-                    onChange={handleChange}
-                    required
-                  />
-                </InputWrapper>
-              </InputGroup>
-            </InputRow>
-            
-            <InputGroup>
-              <SelectWrapper>
-                <RoleIcon>🏷️</RoleIcon>
-                <StyledSelect
-                  name="userType"
-                  value={values.userType}
-                  onChange={handleChange}
-                  required
-                >
-                  <option value="Volunteer">🤝 Volunteer</option>
-                  <option value="Therapist">👨‍⚕️ Therapist</option>
-                </StyledSelect>
-              </SelectWrapper>
-            </InputGroup>
-            
-            <RegisterButton type="submit" disabled={isLoading}>
-              {isLoading ? (
-                <LoadingSpinner />
-              ) : (
-                <>
-                  <span>Create Account</span>
-                  <ArrowIcon>→</ArrowIcon>
-                </>
+              <RegisterButton type="submit" disabled={isLoading}>
+                {isLoading ? (
+                  <LoadingSpinner />
+                ) : (
+                  <>
+                    <span>Continue</span>
+                    <ArrowIcon>→</ArrowIcon>
+                  </>
+                )}
+              </RegisterButton>
+            </Form>
+          ) : (
+            <BlockchainForm>
+              <BlockchainHeader>
+                <BlockchainIcon>⛓️</BlockchainIcon>
+                <BlockchainTitle>Enhance with Blockchain</BlockchainTitle>
+                <BlockchainDescription>
+                  Optional: Enable blockchain features for token staking and enhanced security
+                </BlockchainDescription>
+              </BlockchainHeader>
+
+              <CheckboxWrapper>
+                <StyledCheckbox
+                  type="checkbox"
+                  name="enableBlockchain"
+                  checked={blockchainValues.enableBlockchain}
+                  onChange={handleBlockchainChange}
+                />
+                <CheckboxLabel>Enable blockchain features</CheckboxLabel>
+              </CheckboxWrapper>
+
+              {blockchainValues.enableBlockchain && (
+                <BlockchainOptions>
+                  {!isConnected ? (
+                    <WalletSection>
+                      <WalletButton onClick={handleWalletConnect} disabled={blockchainLoading}>
+                        {blockchainLoading ? <LoadingSpinner /> : "Connect Wallet"}
+                      </WalletButton>
+                      <WalletInfo>Connect your wallet to enable blockchain features</WalletInfo>
+                    </WalletSection>
+                  ) : (
+                    <>
+                      <ConnectedWallet>
+                        <WalletIcon>🔗</WalletIcon>
+                        <span>Wallet Connected</span>
+                      </ConnectedWallet>
+
+                      <InputGroup>
+                        <InputWrapper>
+                          <TokenIcon>🪙</TokenIcon>
+                          <StyledInput
+                            type="number"
+                            name="stakeAmount"
+                            placeholder="Initial stake amount (optional)"
+                            value={blockchainValues.stakeAmount}
+                            onChange={handleBlockchainChange}
+                            min="0.01"
+                            max="1000000"
+                            step="0.01"
+                          />
+                        </InputWrapper>
+                        <InputHint>Stake tokens to earn rewards (0.01 - 1,000,000 tokens)</InputHint>
+                      </InputGroup>
+
+                      {values.userType === "Therapist" && (
+                        <InputGroup>
+                          <InputWrapper>
+                            <TherapistIcon>👨‍⚕️</TherapistIcon>
+                            <StyledInput
+                              type="text"
+                              name="therapistName"
+                              placeholder="Professional name for blockchain"
+                              value={blockchainValues.therapistName}
+                              onChange={handleBlockchainChange}
+                              required
+                            />
+                          </InputWrapper>
+                          <InputHint>This name will be registered on the blockchain</InputHint>
+                        </InputGroup>
+                      )}
+
+                      <BlockchainBenefits>
+                        <BenefitItem>
+                          <BenefitIcon>🔐</BenefitIcon>
+                          <span>Secure token rewards</span>
+                        </BenefitItem>
+                        <BenefitItem>
+                          <BenefitIcon>📊</BenefitIcon>
+                          <span>Transparent progress tracking</span>
+                        </BenefitItem>
+                        <BenefitItem>
+                          <BenefitIcon>💰</BenefitIcon>
+                          <span>Earn tokens for achievements</span>
+                        </BenefitItem>
+                      </BlockchainBenefits>
+                    </>
+                  )}
+                </BlockchainOptions>
               )}
-            </RegisterButton>
-          </Form>
+
+              <ButtonRow>
+                <BackButton onClick={goBackToBasicInfo} disabled={isLoading || blockchainLoading}>
+                  ← Back
+                </BackButton>
+                <RegisterButton 
+                  onClick={handleBlockchainSetup} 
+                  disabled={isLoading || blockchainLoading || (blockchainValues.enableBlockchain && !isConnected)}
+                >
+                  {isLoading || blockchainLoading ? (
+                    <LoadingSpinner />
+                  ) : (
+                    <>
+                      <span>Complete Registration</span>
+                      <ArrowIcon>→</ArrowIcon>
+                    </>
+                  )}
+                </RegisterButton>
+              </ButtonRow>
+            </BlockchainForm>
+          )}
           
           <Divider>
             <DividerLine />
@@ -235,7 +463,7 @@ function Register() {
   );
 }
 
-// Animations
+// Animations (keeping existing ones and adding new ones)
 const float = keyframes`
   0%, 100% { transform: translateY(0px) rotate(0deg); }
   50% { transform: translateY(-20px) rotate(180deg); }
@@ -283,7 +511,12 @@ const fadeInUp = keyframes`
   }
 `;
 
-// Styled Components
+const shimmer = keyframes`
+  0% { background-position: -200px 0; }
+  100% { background-position: calc(200px + 100%) 0; }
+`;
+
+// Existing styled components (keeping all previous ones)
 const Container = styled.div`
   min-height: 100vh;
   background: linear-gradient(135deg, #1e1b4b 0%, #581c87 50%, #be185d 100%);
@@ -496,238 +729,205 @@ const Subtitle = styled.p`
   margin: 0;
 `;
 
-const Form = styled.form`
-  width: 100%;
-`;
-
-const InputRow = styled.div`
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 1rem;
-  margin-bottom: 1.5rem;
-  
-  @media (max-width: 640px) {
-    grid-template-columns: 1fr;
-    gap: 1.5rem;
-  }
-`;
-
-const InputGroup = styled.div`
-  margin-bottom: 1.5rem;
-  
-  ${InputRow} & {
-    margin-bottom: 0;
-  }
-`;
-
-const InputWrapper = styled.div`
-  position: relative;
-  display: flex;
-  align-items: center;
-`;
-
-const SelectWrapper = styled.div`
-  position: relative;
-  display: flex;
-  align-items: center;
-`;
-
-const UserIcon = styled.span`
-  position: absolute;
-  left: 1rem;
-  font-size: 1.2rem;
-  z-index: 1;
-  color: rgba(248, 250, 252, 0.6);
-`;
-
-const EmailIcon = styled.span`
-  position: absolute;
-  left: 1rem;
-  font-size: 1.2rem;
-  z-index: 1;
-  color: rgba(248, 250, 252, 0.6);
-`;
-
-const LockIcon = styled.span`
-  position: absolute;
-  left: 1rem;
-  font-size: 1.2rem;
-  z-index: 1;
-  color: rgba(248, 250, 252, 0.6);
-`;
-
-const CheckIcon = styled.span`
-  position: absolute;
-  left: 1rem;
-  font-size: 1.2rem;
-  z-index: 1;
-  color: rgba(248, 250, 252, 0.6);
-`;
-
-const RoleIcon = styled.span`
-  position: absolute;
-  left: 1rem;
-  font-size: 1.2rem;
-  z-index: 1;
-  color: rgba(248, 250, 252, 0.6);
-`;
-
-const StyledInput = styled.input`
-  width: 100%;
-  padding: 1rem 1rem 1rem 3rem;
-  background: rgba(255, 255, 255, 0.1);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  border-radius: 12px;
-  color: #f8fafc;
-  font-size: 1rem;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  backdrop-filter: blur(10px);
-  
-  &::placeholder {
-    color: rgba(248, 250, 252, 0.5);
-  }
-  
-  &:focus {
-    outline: none;
-    border-color: #8b5cf6;
-    background: rgba(255, 255, 255, 0.15);
-    box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.2);
-    transform: translateY(-2px);
-  }
-`;
-
-const StyledSelect = styled.select`
-  width: 100%;
-  padding: 1rem 1rem 1rem 3rem;
-  background: rgba(255, 255, 255, 0.1);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  border-radius: 12px;
-  color: #f8fafc;
-  font-size: 1rem;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  backdrop-filter: blur(10px);
-  cursor: pointer;
-  appearance: none;
-  background-image: url("data:image/svg+xml;charset=US-ASCII,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 4 5'><path fill='rgba(248, 250, 252, 0.6)' d='M2 0L0 2h4zm0 5L0 3h4z'/></svg>");
-  background-repeat: no-repeat;
-  background-position: right 1rem center;
-  background-size: 12px;
-  
-  option {
-    background: #1e1b4b;
-    color: #f8fafc;
-    padding: 0.5rem;
-  }
-  
-  &:focus {
-    outline: none;
-    border-color: #8b5cf6;
-    background-color: rgba(255, 255, 255, 0.15);
-    box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.2);
-    transform: translateY(-2px);
-  }
-`;
-
-const RegisterButton = styled.button`
-  width: 100%;
-  padding: 1rem;
-  background: linear-gradient(45deg, #8b5cf6, #ec4899);
-  color: white;
-  border: none;
-  border-radius: 12px;
-  font-size: 1.1rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+// New Step Indicator Components
+const StepIndicator = styled.div`
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 0.5rem;
-  margin-top: 1rem;
+  margin-bottom: 2rem;
+`;
+
+const Step = styled.div`
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  transition: all 0.3s ease;
   
-  &:hover {
-    background: linear-gradient(45deg, #7c3aed, #db2777);
+  ${props => props.completed ? `
+    background: linear-gradient(45deg, #10b981, #059669);
+    color: white;
+  ` : props.active ? `
+    background: linear-gradient(45deg, #8b5cf6, #ec4899);
+    color: white;
+  ` : `
+    background: rgba(255, 255, 255, 0.1);
+    color: rgba(248, 250, 252, 0.6);
+  `}
+`;
+
+const StepLine = styled.div`
+  width: 60px;
+  height: 2px;
+  margin: 0 10px;
+  background: ${props => props.active ? 
+    'linear-gradient(90deg, #10b981, #059669)' : 
+    'rgba(255, 255, 255, 0.2)'};
+  transition: all 0.3s ease;
+`;
+
+// New Blockchain Form Components
+const BlockchainForm = styled.div`
+  width: 100%;
+`;
+
+const BlockchainHeader = styled.div`
+  text-align: center;
+  margin-bottom: 2rem;
+`;
+
+const BlockchainIcon = styled.div`
+  font-size: 2.5rem;
+  margin-bottom: 1rem;
+`;
+
+const BlockchainTitle = styled.h3`
+  color: #f8fafc;
+  font-size: 1.5rem;
+  margin-bottom: 0.5rem;
+`;
+
+const BlockchainDescription = styled.p`
+  color: rgba(248, 250, 252, 0.7);
+  font-size: 1rem;
+  margin: 0;
+`;
+
+const CheckboxWrapper = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 2rem;
+  padding: 1rem;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+`;
+
+const StyledCheckbox = styled.input`
+  width: 20px;
+  height: 20px;
+  accent-color: #8b5cf6;
+`;
+
+const CheckboxLabel = styled.label`
+  color: #f8fafc;
+  font-weight: 500;
+`;
+
+const BlockchainOptions = styled.div`
+  animation: ${fadeInUp} 0.5s ease-out;
+`;
+
+const WalletSection = styled.div`
+  text-align: center;
+  margin-bottom: 2rem;
+`;
+
+const WalletButton = styled.button`
+  padding: 1rem 2rem;
+  background: linear-gradient(45deg, #6366f1, #8b5cf6);
+  color: white;
+  border: none;
+  border-radius: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  margin-bottom: 1rem;
+  
+  &:hover:not(:disabled) {
+    background: linear-gradient(45deg, #4f46e5, #7c3aed);
     transform: translateY(-2px);
-    box-shadow: 0 10px 25px rgba(139, 92, 246, 0.4);
-  }
-  
-  &:active {
-    transform: translateY(0);
   }
   
   &:disabled {
     opacity: 0.7;
     cursor: not-allowed;
-    transform: none !important;
   }
 `;
 
-const ArrowIcon = styled.span`
-  font-size: 1.2rem;
-  transition: transform 0.3s ease;
-  
-  ${RegisterButton}:hover & {
-    transform: translateX(4px);
-  }
+const WalletInfo = styled.p`
+  color: rgba(248, 250, 252, 0.7);
+  font-size: 0.9rem;
+  margin: 0;
 `;
 
-const LoadingSpinner = styled.div`
-  width: 20px;
-  height: 20px;
-  border: 2px solid transparent;
-  border-top: 2px solid #ffffff;
-  border-radius: 50%;
-  animation: ${spin} 1s linear infinite;
-`;
-
-const ErrorMessage = styled.div`
-  color: #fca5a5;
-  background: rgba(239, 68, 68, 0.1);
-  border: 1px solid rgba(239, 68, 68, 0.2);
-  padding: 0.75rem;
-  border-radius: 8px;
-  margin-bottom: 1.5rem;
-  text-align: center;
-  backdrop-filter: blur(10px);
-`;
-
-const Divider = styled.div`
+const ConnectedWallet = styled.div`
   display: flex;
   align-items: center;
-  margin: 2rem 0;
+  justify-content: center;
+  gap: 0.5rem;
+  color: #10b981;
+  font-weight: 600;
+  margin-bottom: 2rem;
+  padding: 1rem;
+  background: rgba(16, 185, 129, 0.1);
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  border-radius: 12px;
 `;
 
-const DividerLine = styled.div`
-  flex: 1;
-  height: 1px;
-  background: rgba(255, 255, 255, 0.2);
+const WalletIcon = styled.span`
+  font-size: 1.2rem;
 `;
 
-const DividerText = styled.span`
+const TokenIcon = styled.span`
+  position: absolute;
+  left: 1rem;
+  font-size: 1.2rem;
+  z-index: 1;
   color: rgba(248, 250, 252, 0.6);
-  padding: 0 1rem;
+`;
+
+const TherapistIcon = styled.span`
+  position: absolute;
+  left: 1rem;
+  font-size: 1.2rem;
+  z-index: 1;
+  color: rgba(248, 250, 252, 0.6);
+`;
+
+const BlockchainBenefits = styled.div`
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.75rem;
+  margin-bottom: 2rem;
+`;
+
+const BenefitItem = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  color: rgba(248, 250, 252, 0.8);
   font-size: 0.9rem;
 `;
 
-const LoginSection = styled.div`
-  text-align: center;
+const ButtonRow = styled.div`
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 1rem;
+  margin-top: 2rem;
 `;
 
-const LoginText = styled.p`
-  color: rgba(248, 250, 252, 0.7);
-  margin: 0 0 0.5rem 0;
-`;
-
-const LoginLink = styled(Link)`
-  color: #8b5cf6;
-  text-decoration: none;
+const BackButton = styled.button`
+  padding: 1rem 1.5rem;
+  background: rgba(255, 255, 255, 0.1);
+  color: rgba(248, 250, 252, 0.8);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 12px;
   font-weight: 600;
-  transition: color 0.3s ease;
-  
-  &:hover {
-    color: #a855f7;
-    text-decoration: underline;
-  }
+  cursor: pointer;
+  transition: all 0.3s ease;
 `;
-
-export default Register;
+const NextButton = styled.button`
+  padding: 1rem 1.5rem;
+  background: linear-gradient(45deg, #6366f1, #8b5cf6);
+  color: white;
+  border: none;
+  border-radius: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+`;

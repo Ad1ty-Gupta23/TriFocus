@@ -26,7 +26,7 @@ const books = [
     id: 3,
     title: 'Deep Work',
     author: 'Cal Newport',
-    tokens: 20,
+    tokens: 5,
     cover: '📙',
     description: 'Rules for focused success in a distracted world.',
     pdfLink: '/books/deep-work.pdf'
@@ -34,11 +34,7 @@ const books = [
 ];
 
 const RedeemStore = () => {
-  const [purchased, setPurchased] = useState(() => {
-    // Load purchased books from localStorage
-    const savedPurchases = localStorage.getItem('purchasedBooks');
-    return savedPurchases ? JSON.parse(savedPurchases) : [];
-  });
+  const [purchased, setPurchased] = useState([]);
   const [therapists, setTherapists] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -54,9 +50,33 @@ const RedeemStore = () => {
     userStats, 
     redeemTokens, 
     bookTherapist,
+    verifyTherapist, // Add this function to your context
     loading: blockchainLoading,
     fetchUserStats 
   } = useHabitBlockchain();
+
+  // Safe localStorage initialization
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const savedPurchases = localStorage.getItem('purchasedBooks');
+      if (savedPurchases) {
+        try {
+          setPurchased(JSON.parse(savedPurchases));
+        } catch (error) {
+          console.error('Error parsing purchased books:', error);
+        }
+      }
+      
+      const savedBookings = localStorage.getItem('bookedTherapists');
+      if (savedBookings) {
+        try {
+          setBookedTherapists(JSON.parse(savedBookings));
+        } catch (error) {
+          console.error('Error parsing booked therapists:', error);
+        }
+      }
+    }
+  }, []);
 
   useEffect(() => {
     if (account) {
@@ -64,10 +84,18 @@ const RedeemStore = () => {
     }
   }, [account, fetchUserStats]);
 
-  // Save purchased books to localStorage whenever it changes
+  // Save to localStorage
   useEffect(() => {
-    localStorage.setItem('purchasedBooks', JSON.stringify(purchased));
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('purchasedBooks', JSON.stringify(purchased));
+    }
   }, [purchased]);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('bookedTherapists', JSON.stringify(bookedTherapists));
+    }
+  }, [bookedTherapists]);
 
   useEffect(() => {
     const fetchTherapists = async () => {
@@ -131,25 +159,58 @@ const RedeemStore = () => {
       return;
     }
 
-    const therapistFee = 50; // 50 tokens per session
+    if (!selectedTherapist) {
+      toast.error('No therapist selected');
+      return;
+    }
 
-    if (userStats.earnedTokens < therapistFee) {
+    const therapistFee = 50; // Fixed the token fee to match UI
+
+    if (!userStats || userStats.earnedTokens < therapistFee) {
       toast.error(`Not enough tokens. You need ${therapistFee} tokens to book a session.`);
       return;
     }
 
     try {
-      // Create a fake therapist address for demo purposes
-      const therapistAddress = '0x' + Array(40).fill(0).map(() => Math.floor(Math.random() * 16).toString(16)).join('');
+      // Check if therapist has a verified blockchain address
+      const therapistAddress = selectedTherapist.walletAddress || selectedTherapist.blockchainAddress;
       
+      if (!therapistAddress) {
+        toast.error('This therapist is not available for blockchain booking. Please contact them directly.');
+        return;
+      }
+
+      console.log('Attempting to book therapist:', {
+        therapistAddress,
+        therapistFee,
+        selectedTherapist: selectedTherapist.username
+      });
+
+      // Try to book the therapist
       await bookTherapist(therapistAddress, therapistFee);
-      setBookedTherapists([...bookedTherapists, selectedTherapist._id]);
+      
+      setBookedTherapists(prev => [...prev, selectedTherapist._id]);
       setShowBookingModal(false);
+      setBookingDate('');
+      setBookingTime('');
       toast.success(`Session booked with ${selectedTherapist.username} on ${bookingDate} at ${bookingTime}!`);
+      
     } catch (error) {
       console.error("Error booking therapist:", error);
-      toast.error("Failed to book therapist. Please try again.");
+      
+      if (error.message.includes("Therapist not verified")) {
+        toast.error(`This therapist is not verified on the blockchain yet. Please try booking with a different therapist or contact support.`);
+      } else if (error.message.includes("insufficient funds")) {
+        toast.error("Insufficient tokens or gas fees. Please check your balance.");
+      } else {
+        toast.error(`Booking failed: ${error.message || 'Please try again later.'}`);
+      }
     }
+  };
+
+  // Helper function to check if therapist is blockchain-verified
+  const isTherapistVerified = (therapist) => {
+    return therapist.walletAddress || therapist.blockchainAddress || therapist.isVerified;
   };
 
   const UserCard = ({ user, roleColor }) => (
@@ -159,7 +220,14 @@ const RedeemStore = () => {
           <UserCheck className="w-6 h-6 text-white" />
         </div>
         <div className="flex-1">
-          <h3 className="font-semibold text-white text-lg">{user.username}</h3>
+          <div className="flex items-center gap-2">
+            <h3 className="font-semibold text-white text-lg">{user.username}</h3>
+            {isTherapistVerified(user) ? (
+              <span className="bg-green-500 text-white text-xs px-2 py-1 rounded-full">✓ Verified</span>
+            ) : (
+              <span className="bg-yellow-500 text-white text-xs px-2 py-1 rounded-full">⚠ Not Verified</span>
+            )}
+          </div>
           <div className="flex items-center text-white/80 text-sm mt-2">
             <Mail className="w-4 h-4 mr-2" />
             {user.email}
@@ -174,11 +242,16 @@ const RedeemStore = () => {
             ) : (
               <button
                 onClick={() => handleBookTherapist(user)}
-                className="bg-purple-600 hover:bg-purple-700 px-4 py-2 rounded-lg text-white flex items-center"
+                className={`px-4 py-2 rounded-lg text-white flex items-center ${
+                  isTherapistVerified(user) 
+                    ? 'bg-purple-600 hover:bg-purple-700' 
+                    : 'bg-gray-600 hover:bg-gray-700'
+                }`}
                 disabled={blockchainLoading || !account}
+                title={!isTherapistVerified(user) ? 'This therapist is not verified for blockchain booking' : ''}
               >
                 {blockchainLoading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Calendar className="w-4 h-4 mr-2" />}
-                Book Session
+                {isTherapistVerified(user) ? 'Book Session' : 'Not Available'}
               </button>
             )}
           </div>
@@ -237,6 +310,20 @@ const RedeemStore = () => {
         </div>
 
         <SectionHeader title="Available Therapists" count={therapists.length} icon={UserCheck} />
+        
+        {/* Add info banner about verification */}
+        <div className="bg-blue-500/20 backdrop-blur-lg border border-blue-400/30 rounded-xl p-4 mb-6">
+          <div className="flex items-center space-x-3">
+            <AlertCircle className="w-6 h-6 text-blue-300" />
+            <div>
+              <p className="text-blue-200">
+                Only verified therapists can be booked through the blockchain. 
+                Non-verified therapists can be contacted directly via email.
+              </p>
+            </div>
+          </div>
+        </div>
+
         {loading ? (
           <div className="flex items-center justify-center space-x-3 text-white">
             <Loader2 className="w-8 h-8 animate-spin" />
@@ -274,6 +361,14 @@ const RedeemStore = () => {
           <div className="bg-white/10 backdrop-blur-lg rounded-xl border border-white/20 p-6 max-w-md w-full">
             <h3 className="text-2xl font-bold mb-4">Book Session with {selectedTherapist?.username}</h3>
             <p className="mb-6">Session Fee: 50 Tokens</p>
+            
+            {!isTherapistVerified(selectedTherapist) && (
+              <div className="bg-yellow-500/20 border border-yellow-400/30 rounded-lg p-3 mb-4">
+                <p className="text-yellow-200 text-sm">
+                  ⚠ This therapist is not blockchain-verified. Booking may fail.
+                </p>
+              </div>
+            )}
             
             <div className="space-y-4">
               <div>

@@ -103,7 +103,7 @@ function Home() {
                 </>
               ) : (
                 <Link 
-                  to="/dashboard" 
+                  to="/usedash" 
                   className={`px-8 py-3.5 text-lg font-medium bg-gradient-to-r ${colors.primary} text-white rounded-lg hover:shadow-xl transition-all duration-300`}
                 >
                   Go to Dashboard

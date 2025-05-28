@@ -19,7 +19,8 @@ import MeditationHome from './pages/MediHome.jsx'
 import RedeemStore from './components/Store.jsx'
 import CombinedStorePage from './pages/CombinedStorePage.jsx'
 import { HabitBlockchainProvider } from './context/HabitBlockchainContext.jsx';
-
+import IPFSUploader from './components/IPFSUploader.jsx';
+import UserDashboard from './components/UserDashBoard.jsx'
 function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [user, setUser] = useState(null);
@@ -58,6 +59,8 @@ function App() {
           <Route path="/crisis" element={<MedicalReportAnalyzer />}></Route>
         <Route path="/meditation" element={<MeditationHome />}></Route>
         <Route path='/redeem' element={<CombinedStorePage />}></Route>
+        <Route path='/upload' element={<IPFSUploader />}></Route>
+        <Route path="/usedash" element={<UserDashboard />} ></Route>
       </Routes>
     </BrowserRouter>
     </HabitBlockchainProvider>

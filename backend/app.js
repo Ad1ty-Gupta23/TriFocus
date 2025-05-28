@@ -3,6 +3,7 @@ import mongoose from 'mongoose';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import userrouter from "./routes/user.js";
+import ipfsRoutes from "./routes/ipfsRoutes.js";
 
 const PORT=5000;
 const app=express();
@@ -27,5 +28,6 @@ app.get("/ping", (_req, res) => {
     return res.json({ msg: "Ping Successful" });
   });
 app.use("/api/user", userrouter);
+app.use('/api/ipfs', ipfsRoutes);
 
 export default app
