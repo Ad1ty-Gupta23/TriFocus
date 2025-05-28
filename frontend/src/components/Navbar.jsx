@@ -14,12 +14,12 @@ function Navbar({ isLoggedIn: propIsLoggedIn, user: propUser }) {
 
   // Get blockchain context - this replaces the manual wallet connection logic
   const { 
-    account, 
-    connectWallet, 
-    userStats, 
-    loading,
-    fetchUserStats 
-  } = useHabitBlockchain();
+  account, 
+  connectWallet, 
+  userData, 
+  isLoading,
+  loadUserData 
+} = useHabitBlockchain();
 
   // Get current active section from URL
   const getActiveSection = () => {
@@ -62,10 +62,11 @@ function Navbar({ isLoggedIn: propIsLoggedIn, user: propUser }) {
 
   // Fetch user stats when wallet is connected
   useEffect(() => {
-    if (account) {
-      fetchUserStats();
-    }
-  }, [account, fetchUserStats]);
+  if (account) {
+    loadUserData();
+  }
+}, [account, loadUserData]);
+
 
   const loadTherapistDashboardData = () => {
     setCrisisAlerts(Math.floor(Math.random() * 3));
@@ -278,7 +279,8 @@ function Navbar({ isLoggedIn: propIsLoggedIn, user: propUser }) {
                   <path d="M12 17V17.01" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
                   <path d="M12 13.5C14.5 13.5 15 12 15 11C15 9.5 13.5 9 12 9C10.5 9 9 9.5 9 11C9 12 9.5 13.5 12 13.5Z" fill="currentColor" stroke="currentColor" strokeWidth="0.5" strokeLinecap="round" strokeLinejoin="round"/>
                 </svg>
-                <span className="font-medium">{userStats.earnedTokens}</span>
+                <span className="font-medium">{userData?.earnedTokens ?? 0}</span>
+
                 <span className="text-xs">Tokens</span>
               </div>
             </div>
@@ -298,10 +300,10 @@ function Navbar({ isLoggedIn: propIsLoggedIn, user: propUser }) {
             ) : (
               <button
                 onClick={handleConnectWallet}
-                disabled={loading}
+                disabled={isLoading}
                 className="flex items-center space-x-2 px-4 py-2 text-sm font-medium bg-gradient-to-r from-orange-500 to-amber-600 text-white rounded-lg hover:from-orange-600 hover:to-amber-700 transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
               >
-                {loading ? (
+                {isLoading ? (
                   <>
                     <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>

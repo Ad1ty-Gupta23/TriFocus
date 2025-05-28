@@ -14,13 +14,14 @@ const FocusForestTimer = () => {
   
   // Get blockchain context
   const { 
-    account, 
-    connectWallet, 
-    completeTask, 
-    userStats, 
-    loading,
-    fetchUserStats 
-  } = useHabitBlockchain();
+  account, 
+  connectWallet, 
+  completeTask, 
+  userData, 
+  isLoading,
+  loadUserData 
+} = useHabitBlockchain();
+
 
   // After successful login:
   const handleLogin = (userData) => {
@@ -43,10 +44,11 @@ const FocusForestTimer = () => {
 
   // Fetch user data on component mount
   useEffect(() => {
-    if (account) {
-      fetchUserStats();
-    }
-  }, [account, fetchUserStats]);
+  if (account) {
+    loadUserData();
+  }
+}, [account, loadUserData]);
+
 
   const formatTime = (s) => {
     const m = Math.floor(s / 60);
@@ -73,22 +75,27 @@ const FocusForestTimer = () => {
   };
 
   const handleClaimReward = async () => {
-    if (!account) {
-      toast.error("Wallet not connected. Please connect your wallet.");
-      return;
-    }
-    
-    try {
-      // Calculate reward based on session duration (1 token per minute)
-      const reward = customMinutes;
-      await completeTask(reward);
-      toast.success(`Congratulations! You earned ${reward} tokens!`);
-      setRewardClaimed(true);
-    } catch (error) {
-      console.error("Error claiming reward:", error);
-      toast.error("Failed to claim reward. Please try again.");
-    }
-  };
+  if (!account) {
+    toast.error("Wallet not connected. Please connect your wallet.");
+    return;
+  }
+
+  if (!userData.isActive) {
+    toast.warning("⚠️ You must activate your account by staking tokens first.");
+    return;
+  }
+
+  try {
+    const reward = customMinutes;
+    await completeTask(reward);
+    toast.success(`Congratulations! You earned ${reward} tokens!`);
+    setRewardClaimed(true);
+  } catch (error) {
+    console.error("Error claiming reward:", error);
+    toast.error("Failed to claim reward. Please try again.");
+  }
+};
+
 
   const radius = 70;
   const circumference = 2 * Math.PI * radius;
@@ -114,7 +121,8 @@ const FocusForestTimer = () => {
               </span>
               <div className="mt-2 text-sm">
                 <span className="font-medium">Balance: </span>
-                <span className="text-green-400">{userStats.earnedTokens} tokens</span>
+                <span className="text-green-400">{userData?.earnedTokens ?? 0} tokens</span>
+
               </div>
             </div>
           ) : (
@@ -173,10 +181,10 @@ const FocusForestTimer = () => {
             {account && !rewardClaimed && (
               <button
                 onClick={handleClaimReward}
-                disabled={loading}
+                disabled={isLoading}
                 className="bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 px-6 py-2 rounded-xl text-white font-semibold transition-all duration-200 shadow-lg hover:shadow-green-500/20 disabled:opacity-50 flex items-center justify-center mx-auto"
               >
-                {loading ? (
+                {isLoading ? (
                   <span className="flex items-center">
                     <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
@@ -195,21 +203,33 @@ const FocusForestTimer = () => {
           </div>
         )}
 
-        <div className="flex justify-center gap-4 mt-4 relative z-10">
-          <button
-            onClick={handleStart}
-            disabled={isRunning}
-            className="bg-green-600 hover:bg-green-700 px-6 py-2 rounded-xl text-white font-semibold disabled:opacity-50 transition-all duration-200"
-          >
-            Start
-          </button>
-          <button
-            onClick={handleReset}
-            className="bg-red-600 hover:bg-red-700 px-6 py-2 rounded-xl text-white font-semibold transition-all duration-200"
-          >
-            Reset
-          </button>
-        </div>
+        <div className="flex flex-col items-center gap-2 mt-4 relative z-10">
+  {!userData.isActive && (
+    <p className="text-red-400 text-sm font-medium">
+      ⚠️ You must stake tokens to activate your account before starting a session.
+    </p>
+  )}
+  <div className="flex justify-center gap-4">
+    <button
+      onClick={handleStart}
+      disabled={isRunning || !userData.isActive}
+      className={`px-6 py-2 rounded-xl text-white font-semibold transition-all duration-200 ${
+        !userData.isActive
+          ? 'bg-gray-500 cursor-not-allowed'
+          : 'bg-green-600 hover:bg-green-700'
+      } disabled:opacity-50`}
+    >
+      Start
+    </button>
+    <button
+      onClick={handleReset}
+      className="bg-red-600 hover:bg-red-700 px-6 py-2 rounded-xl text-white font-semibold transition-all duration-200"
+    >
+      Reset
+    </button>
+  </div>
+</div>
+
       </div>
     </div>
     </>

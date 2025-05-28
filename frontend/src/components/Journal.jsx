@@ -21,15 +21,15 @@ const Journal = () => {
     completeTask, 
     userStats, 
     loading: blockchainLoading,
-    fetchUserStats 
+    loadUserData 
   } = useHabitBlockchain();
   
   // Fetch user stats when account changes
   useEffect(() => {
     if (account) {
-      fetchUserStats();
+      loadUserData();
     }
-  }, [account, fetchUserStats]);
+  }, [account, loadUserData]);
 
   const [newTask, setNewTask] = useState({
     title: '',

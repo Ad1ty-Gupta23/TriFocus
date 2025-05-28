@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { ethers } from 'ethers';
-import HabitStakingABI from '../abi/habitStaking.json';
+import HabitStakingABI from '../abi/HabitStaking.json';
 
 // Contract configuration
 const CONTRACT_CONFIG = {
@@ -83,9 +83,21 @@ export const HabitBlockchainProvider = ({ children }) => {
         const web3Signer = await web3Provider.getSigner();
         setSigner(web3Signer);
         
+        // Handle different ABI formats
+        let abiArray;
+        if (Array.isArray(HabitStakingABI)) {
+          abiArray = HabitStakingABI;
+        } else if (HabitStakingABI.abi && Array.isArray(HabitStakingABI.abi)) {
+          abiArray = HabitStakingABI.abi;
+        } else if (typeof HabitStakingABI === 'object' && HabitStakingABI.default) {
+          abiArray = Array.isArray(HabitStakingABI.default) ? HabitStakingABI.default : HabitStakingABI.default.abi;
+        } else {
+          throw new Error('Invalid ABI format. Expected an array or object with abi property.');
+        }
+
         const habitContract = new ethers.Contract(
           CONTRACT_CONFIG.address,
-          HABIT_STAKING_ABI,
+          abiArray,
           web3Signer
         );
         setContract(habitContract);

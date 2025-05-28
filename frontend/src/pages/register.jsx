@@ -6,7 +6,7 @@ import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { useHabitBlockchain } from "../context/HabitBlockchainContext";
 
-function Register() {
+export default function Register() {
   const navigate = useNavigate();
   const {
     isConnected,
@@ -190,6 +190,11 @@ function Register() {
     setCurrentStep(1);
     setError("");
   };
+  const Form = styled.form`
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+`;
 
   return (
     <Container>
@@ -877,17 +882,20 @@ const TokenIcon = styled.span`
   position: absolute;
   left: 1rem;
   font-size: 1.2rem;
-  z-index: 1;
   color: rgba(248, 250, 252, 0.6);
+  pointer-events: none;
+  z-index: 2;
 `;
 
 const TherapistIcon = styled.span`
   position: absolute;
   left: 1rem;
   font-size: 1.2rem;
-  z-index: 1;
   color: rgba(248, 250, 252, 0.6);
+  pointer-events: none;
+  z-index: 2;
 `;
+
 
 const BlockchainBenefits = styled.div`
   display: grid;
@@ -930,4 +938,262 @@ const NextButton = styled.button`
   font-weight: 600;
   cursor: pointer;
   transition: all 0.3s ease;
+`;
+
+const InputRow = styled.div`
+  display: flex;
+  gap: 1rem;
+  flex-direction: row;
+  @media (max-width: 768px) {
+    flex-direction: column;
+  }
+`;
+const InputGroup = styled.div`
+  width: 100%;
+  margin-bottom: 1rem;
+`;
+const InputWrapper = styled.div`
+  position: relative;
+  display: flex;
+  align-items: center;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  margin-bottom: 1rem;
+  transition: all 0.3s ease;
+
+  &:focus-within {
+    border-color: rgba(139, 92, 246, 0.5);
+    background: rgba(255, 255, 255, 0.08);
+    box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.1);
+  }
+`;
+const UserIcon = styled.span`
+  position: absolute;
+  left: 1rem;
+  font-size: 1.2rem;
+  color: rgba(248, 250, 252, 0.6);
+  pointer-events: none;
+  z-index: 2;
+`;
+const StyledInput = styled.input`
+  width: 100%;
+  padding: 0.75rem 1rem 0.75rem 3rem;
+  border: none;
+  border-radius: 12px;
+  background: transparent;
+  color: #f8fafc;
+  font-size: 1rem;
+  outline: none;
+
+  &::placeholder {
+    color: rgba(248, 250, 252, 0.6);
+  }
+
+  &:focus {
+    outline: none;
+  }
+`;
+const EmailIcon = styled.span`
+  position: absolute;
+  left: 1rem;
+  font-size: 1.2rem;
+  color: rgba(248, 250, 252, 0.6);
+  pointer-events: none;
+  z-index: 2;
+`;
+
+const LockIcon = styled.span`
+  position: absolute;
+  left: 1rem;
+  font-size: 1.2rem;
+  color: rgba(248, 250, 252, 0.6);
+  pointer-events: none;
+  z-index: 2;
+`;
+
+const CheckIcon = styled.span`
+  position: absolute;
+  left: 1rem;
+  font-size: 1.2rem;
+  color: rgba(248, 250, 252, 0.6);
+  pointer-events: none;
+  z-index: 2;
+`;
+
+const RoleIcon = styled.span`
+  position: absolute;
+  left: 1rem;
+  font-size: 1.2rem;
+  color: rgba(248, 250, 252, 0.6);
+  pointer-events: none;
+  z-index: 2;
+`;
+const SelectWrapper = styled.div`
+  position: relative;
+  display: flex;
+  align-items: center;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  margin-bottom: 1rem;
+  transition: all 0.3s ease;
+
+  &:focus-within {
+    border-color: rgba(139, 92, 246, 0.5);
+    background: rgba(255, 255, 255, 0.08);
+    box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.1);
+  }
+`;
+
+const StyledSelect = styled.select`
+  width: 100%;
+  padding: 0.75rem 1rem 0.75rem 3rem;
+  background: transparent;
+  color: #f8fafc;
+  font-size: 1rem;
+  border: none;
+  border-radius: 12px;
+  outline: none;
+  appearance: none;
+  cursor: pointer;
+
+  option {
+    color: #111827;
+    background-color: #f9fafb;
+  }
+
+  &:focus {
+    outline: none;
+  }
+`;
+// Missing styled components for the Register component
+
+const RegisterButton = styled.button`
+  width: 100%;
+  padding: 1rem 1.5rem;
+  background: linear-gradient(45deg, #8b5cf6, #ec4899);
+  color: white;
+  border: none;
+  border-radius: 12px;
+  font-weight: 600;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  position: relative;
+  overflow: hidden;
+
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(
+      90deg,
+      transparent,
+      rgba(255, 255, 255, 0.2),
+      transparent
+    );
+    transition: left 0.5s;
+  }
+
+  &:hover:not(:disabled) {
+    background: linear-gradient(45deg, #7c3aed, #db2777);
+    transform: translateY(-2px);
+    box-shadow: 0 10px 25px rgba(139, 92, 246, 0.4);
+
+    &::before {
+      left: 100%;
+    }
+  }
+
+  &:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+    transform: none;
+  }
+`;
+
+const ArrowIcon = styled.span`
+  font-size: 1.2rem;
+  transition: transform 0.3s ease;
+
+  ${RegisterButton}:hover & {
+    transform: translateX(4px);
+  }
+`;
+
+const LoadingSpinner = styled.div`
+  width: 24px;
+  height: 24px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top: 2px solid white;
+  border-radius: 50%;
+  animation: ${spin} 1s linear infinite;
+`;
+
+const ErrorMessage = styled.div`
+  background: rgba(239, 68, 68, 0.2);
+  border: 1px solid rgba(239, 68, 68, 0.4);
+  color: #fca5a5;
+  padding: 1rem;
+  border-radius: 12px;
+  margin-bottom: 1.5rem;
+  font-size: 0.9rem;
+  text-align: center;
+  backdrop-filter: blur(10px);
+`;
+
+const Divider = styled.div`
+  display: flex;
+  align-items: center;
+  margin: 2rem 0;
+`;
+
+const DividerLine = styled.div`
+  flex: 1;
+  height: 1px;
+  background: rgba(255, 255, 255, 0.2);
+`;
+
+const DividerText = styled.span`
+  color: rgba(248, 250, 252, 0.6);
+  font-size: 0.9rem;
+  margin: 0 1rem;
+`;
+
+const LoginSection = styled.div`
+  text-align: center;
+  margin-top: 1rem;
+`;
+
+const LoginText = styled.span`
+  color: rgba(248, 250, 252, 0.7);
+  font-size: 0.95rem;
+`;
+
+const LoginLink = styled(Link)`
+  color: #8b5cf6;
+  text-decoration: none;
+  font-weight: 600;
+  margin-left: 0.5rem;
+  transition: color 0.3s ease;
+
+  &:hover {
+    color: #a855f7;
+    text-decoration: underline;
+  }
+`;
+
+const InputHint = styled.div`
+  color: rgba(248, 250, 252, 0.6);
+  font-size: 0.8rem;
+  margin-top: 0.5rem;
+  margin-left: 0.5rem;
 `;
