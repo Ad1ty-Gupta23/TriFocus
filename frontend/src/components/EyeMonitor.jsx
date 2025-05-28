@@ -1,15 +1,36 @@
 import React, { useEffect, useRef, useState } from 'react';
 import Navbar from './Navbar';
+import { useHabitBlockchain } from '../context/HabitBlockchainContext';
+import { toast } from 'react-toastify';
+
 const EyeDetectionTimer = () => {
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
-  const [model, setModel] = useState(null);
-  const [isLoading, setIsLoading] = useState(true);
   const [eyesBlinkedCount, setEyesBlinkedCount] = useState(0);
-  const [timerSeconds, setTimerSeconds] = useState(0);
-  const [isTimerActive, setIsTimerActive] = useState(false);
   const [eyesClosed, setEyesClosed] = useState(false);
+  const [timerSeconds, setTimerSeconds] = useState(0);
+  const [isLoading, setIsLoading] = useState(true);
+  const [rewardClaimed, setRewardClaimed] = useState(false);
+  const [model, setModel] = useState(null); // Add this missing state
+  const [isTimerActive, setIsTimerActive] = useState(false); // Add this missing state
   
+  // Get blockchain context
+  const { 
+    account, 
+    connectWallet, 
+    completeTask, 
+    userStats, 
+    loading: blockchainLoading,
+    fetchUserStats 
+  } = useHabitBlockchain();
+  
+  // Fetch user stats when account changes
+  useEffect(() => {
+    if (account) {
+      fetchUserStats();
+    }
+  }, [account, fetchUserStats]);
+
   const timerRef = useRef(null);
   const eyesClosedRef = useRef(0);
   const eyesBlinkedCounterRef = useRef(0);
@@ -204,6 +225,25 @@ const EyeDetectionTimer = () => {
     return 'text-blue-600';
   };
 
+  // Handle claiming reward
+  const handleClaimReward = async () => {
+    if (!account) {
+      toast.error("Please connect your wallet first!");
+      return;
+    }
+    
+    try {
+      // Use the session duration as the reward amount (minimum 1 token)
+      const rewardAmount = Math.max(1, Math.floor(timerSeconds / 60));
+      await completeTask(rewardAmount);
+      setRewardClaimed(true);
+      toast.success(`Successfully claimed ${rewardAmount} tokens!`);
+    } catch (error) {
+      console.error("Error claiming reward:", error);
+      toast.error("Failed to claim tokens. Please try again.");
+    }
+  };
+
   return (
     <>
     <Navbar />
@@ -212,6 +252,35 @@ const EyeDetectionTimer = () => {
       <h1 className="text-3xl font-bold mb-6 text-white">
         Eye Detection Timer with Face Mesh
       </h1>
+      
+      {/* Wallet Connection Status */}
+      <div className="mb-4 bg-white/10 backdrop-blur-sm rounded-lg p-3 border border-white/20 flex items-center justify-between w-full max-w-md">
+        {account ? (
+          <>
+            <div className="flex items-center space-x-2">
+              <div className="w-3 h-3 bg-green-400 rounded-full"></div>
+              <span className="text-white text-sm">
+                Connected: {account.substring(0, 6)}...{account.substring(account.length - 4)}
+              </span>
+            </div>
+            {userStats && (
+              <div className="text-white text-sm">
+                <span className="font-bold">{userStats.tokenBalance}</span> tokens
+              </div>
+            )}
+          </>
+        ) : (
+          <div className="flex items-center justify-between w-full">
+            <span className="text-white text-sm">Wallet not connected</span>
+            <button 
+              onClick={connectWallet}
+              className="px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded-md transition-colors"
+            >
+              Connect Wallet
+            </button>
+          </div>
+        )}
+      </div>
       
       {isLoading && (
         <div className="mb-4">
@@ -264,6 +333,37 @@ const EyeDetectionTimer = () => {
         />
       </div>
       
+      {/* Reward Claiming Section */}
+      {timerSeconds >= 60 && !rewardClaimed && (
+        <div className="mt-6 text-center">
+          <button
+            onClick={handleClaimReward}
+            disabled={blockchainLoading || !account}
+            className="px-6 py-3 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-lg font-medium hover:from-green-600 hover:to-emerald-700 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2 mx-auto"
+          >
+            {blockchainLoading ? (
+              <>
+                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                <span>Processing...</span>
+              </>
+            ) : (
+              <>
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <span>Claim {Math.max(1, Math.floor(timerSeconds / 60))} Tokens</span>
+              </>
+            )}
+          </button>
+        </div>
+      )}
+      
+      {rewardClaimed && (
+        <div className="mt-6 text-center bg-green-500/20 backdrop-blur-sm p-4 rounded-lg border border-green-500/30">
+          <p className="text-green-300 font-semibold">Tokens claimed successfully!</p>
+        </div>
+      )}
+      
       <div className="mt-6 text-center text-white/80 max-w-2xl">
         <h3 className="text-lg font-semibold mb-2 text-white">How it works:</h3>
         <ul className="text-sm space-y-1">
@@ -272,6 +372,7 @@ const EyeDetectionTimer = () => {
           <li>• Red dots show detected eye landmarks</li>
           <li>• Blink counter increases each time you open your eyes after closing them</li>
           <li>• Timer turns red when you reach 5 minutes with eyes closed</li>
+          <li>• Earn 1 token for each minute of eye meditation (minimum 1 minute required)</li>
         </ul>
       </div>
     </div>

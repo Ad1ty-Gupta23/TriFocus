@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Search, FileText, Download, Eye, Calendar, AlertCircle, Shield, Heart, Brain, Activity } from 'lucide-react';
 import Navbar from "./Navbar";
+import IPFSUploader from './IPFSUploader';
 
 const PatientFiles = () => {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -431,6 +432,41 @@ const PatientFiles = () => {
                       </div>
                     ))}
                   </div>
+                </div>
+
+                {/* IPFS Upload Section */}
+                <div className="mt-8">
+                  <IPFSUploader 
+                    patientAddress={selectedPatient.walletAddress} 
+                    onUploadComplete={(cid) => {
+                      // Add the new record to the patient's health records
+                      const newRecord = {
+                        id: Date.now(), // Generate a temporary ID
+                        fileName: `IPFS_Report_${new Date().toISOString().split('T')[0]}.pdf`,
+                        uploadDate: new Date().toISOString().split('T')[0],
+                        fileType: 'ipfs',
+                        size: 'Varies',
+                        description: 'Encrypted medical report stored on IPFS',
+                        priority: 'medium',
+                        ipfsCID: cid
+                      };
+                      
+                      // Update the patient's health records
+                      setPatients(prevPatients => 
+                        prevPatients.map(patient => 
+                          patient.id === selectedPatient.id 
+                            ? {...patient, healthRecords: [...patient.healthRecords, newRecord]} 
+                            : patient
+                        )
+                      );
+                      
+                      // Update the selected patient
+                      setSelectedPatient(prev => ({
+                        ...prev,
+                        healthRecords: [...prev.healthRecords, newRecord]
+                      }));
+                    }}
+                  />
                 </div>
 
                 {/* Crisis Alerts */}

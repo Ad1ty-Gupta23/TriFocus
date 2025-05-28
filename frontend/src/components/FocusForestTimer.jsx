@@ -1,5 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import Navbar from './Navbar';
+import { useHabitBlockchain } from '../context/HabitBlockchainContext';
+import { toast } from 'react-toastify';
+
 const FocusForestTimer = () => {
   const [customMinutes, setCustomMinutes] = useState(25);
   const [seconds, setSeconds] = useState(1500);
@@ -7,6 +10,17 @@ const FocusForestTimer = () => {
   const [sessionComplete, setSessionComplete] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [user, setUser] = useState(null);
+  const [rewardClaimed, setRewardClaimed] = useState(false);
+  
+  // Get blockchain context
+  const { 
+    account, 
+    connectWallet, 
+    completeTask, 
+    userStats, 
+    loading,
+    fetchUserStats 
+  } = useHabitBlockchain();
 
   // After successful login:
   const handleLogin = (userData) => {
@@ -27,6 +41,13 @@ const FocusForestTimer = () => {
     return () => clearInterval(interval);
   }, [isRunning, seconds]);
 
+  // Fetch user data on component mount
+  useEffect(() => {
+    if (account) {
+      fetchUserStats();
+    }
+  }, [account, fetchUserStats]);
+
   const formatTime = (s) => {
     const m = Math.floor(s / 60);
     const sec = s % 60;
@@ -34,7 +55,12 @@ const FocusForestTimer = () => {
   };
 
   const handleStart = () => {
+    if (!account) {
+      toast.warning("Please connect your wallet to track rewards");
+      return;
+    }
     setSessionComplete(false);
+    setRewardClaimed(false);
     setSeconds(customMinutes * 60);
     setIsRunning(true);
   };
@@ -42,7 +68,26 @@ const FocusForestTimer = () => {
   const handleReset = () => {
     setIsRunning(false);
     setSessionComplete(false);
+    setRewardClaimed(false);
     setSeconds(customMinutes * 60);
+  };
+
+  const handleClaimReward = async () => {
+    if (!account) {
+      toast.error("Wallet not connected. Please connect your wallet.");
+      return;
+    }
+    
+    try {
+      // Calculate reward based on session duration (1 token per minute)
+      const reward = customMinutes;
+      await completeTask(reward);
+      toast.success(`Congratulations! You earned ${reward} tokens!`);
+      setRewardClaimed(true);
+    } catch (error) {
+      console.error("Error claiming reward:", error);
+      toast.error("Failed to claim reward. Please try again.");
+    }
   };
 
   const radius = 70;
@@ -58,6 +103,29 @@ const FocusForestTimer = () => {
         <div className="absolute -inset-1 bg-gradient-to-r from-pink-500 via-purple-500 to-indigo-500 blur-xl opacity-30 rounded-3xl animate-pulse" />
 
         <h1 className="text-4xl font-bold mb-4 relative z-10">🌿 Focus Forest</h1>
+        
+        {/* Wallet Connection Status */}
+        <div className="mb-4 relative z-10">
+          {account ? (
+            <div className="flex flex-col items-center">
+              <span className="text-green-400 font-medium mb-1">🔗 Wallet Connected</span>
+              <span className="text-xs bg-green-900/30 px-3 py-1 rounded-full">
+                {account.slice(0, 6)}...{account.slice(-4)}
+              </span>
+              <div className="mt-2 text-sm">
+                <span className="font-medium">Balance: </span>
+                <span className="text-green-400">{userStats.earnedTokens} tokens</span>
+              </div>
+            </div>
+          ) : (
+            <button 
+              onClick={connectWallet}
+              className="bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 px-4 py-2 rounded-xl text-white font-medium transition-all duration-200 shadow-lg hover:shadow-orange-500/20"
+            >
+              Connect Wallet
+            </button>
+          )}
+        </div>
 
         <div className="mb-4 relative z-10">
           <label className="text-sm mb-2 block">⏱ Set Timer (minutes):</label>
@@ -100,20 +168,44 @@ const FocusForestTimer = () => {
         </div>
 
         {sessionComplete && (
-          <p className="text-green-400 text-lg font-medium mb-4">🎉 Time's up! You’ve earned a token!</p>
+          <div className="mb-4 relative z-10">
+            <p className="text-green-400 text-lg font-medium mb-2">🎉 Time's up! Great job!</p>
+            {account && !rewardClaimed && (
+              <button
+                onClick={handleClaimReward}
+                disabled={loading}
+                className="bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 px-6 py-2 rounded-xl text-white font-semibold transition-all duration-200 shadow-lg hover:shadow-green-500/20 disabled:opacity-50 flex items-center justify-center mx-auto"
+              >
+                {loading ? (
+                  <span className="flex items-center">
+                    <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    Processing...
+                  </span>
+                ) : (
+                  `Claim ${customMinutes} Tokens`
+                )}
+              </button>
+            )}
+            {rewardClaimed && (
+              <p className="text-green-300 text-sm">✅ Tokens claimed successfully!</p>
+            )}
+          </div>
         )}
 
         <div className="flex justify-center gap-4 mt-4 relative z-10">
           <button
             onClick={handleStart}
             disabled={isRunning}
-            className="bg-green-600 hover:bg-green-700 px-6 py-2 rounded-xl text-white font-semibold disabled:opacity-50"
+            className="bg-green-600 hover:bg-green-700 px-6 py-2 rounded-xl text-white font-semibold disabled:opacity-50 transition-all duration-200"
           >
             Start
           </button>
           <button
             onClick={handleReset}
-            className="bg-red-600 hover:bg-red-700 px-6 py-2 rounded-xl text-white font-semibold"
+            className="bg-red-600 hover:bg-red-700 px-6 py-2 rounded-xl text-white font-semibold transition-all duration-200"
           >
             Reset
           </button>

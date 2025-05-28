@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Mail, UserCheck, AlertCircle, Loader2 } from 'lucide-react';
+import { Mail, UserCheck, AlertCircle, Loader2, Calendar, Clock } from 'lucide-react';
+import { useHabitBlockchain } from '../context/HabitBlockchainContext';
+import { toast } from 'react-toastify';
 
 const books = [
   {
@@ -32,11 +34,31 @@ const books = [
 ];
 
 const RedeemStore = () => {
-  const [userTokens, setUserTokens] = useState(50);
   const [purchased, setPurchased] = useState([]);
   const [therapists, setTherapists] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [showBookingModal, setShowBookingModal] = useState(false);
+  const [selectedTherapist, setSelectedTherapist] = useState(null);
+  const [bookingDate, setBookingDate] = useState('');
+  const [bookingTime, setBookingTime] = useState('');
+  const [bookedTherapists, setBookedTherapists] = useState([]);
+  
+  // Get blockchain context
+  const { 
+    account, 
+    userStats, 
+    redeemTokens, 
+    bookTherapist,
+    loading: blockchainLoading,
+    fetchUserStats 
+  } = useHabitBlockchain();
+
+  useEffect(() => {
+    if (account) {
+      fetchUserStats();
+    }
+  }, [account, fetchUserStats]);
 
   useEffect(() => {
     const fetchTherapists = async () => {
@@ -58,18 +80,67 @@ const RedeemStore = () => {
     fetchTherapists();
   }, []);
 
-  const handleRedeem = (book) => {
-    if (userTokens < book.tokens) {
-      alert('Not enough tokens to redeem this book!');
+  const handleRedeem = async (book) => {
+    if (!account) {
+      toast.error('Please connect your wallet first!');
       return;
     }
+    
+    if (userStats.earnedTokens < book.tokens) {
+      toast.error('Not enough tokens to redeem this book!');
+      return;
+    }
+    
     if (purchased.includes(book.id)) {
-      alert('You have already redeemed this book.');
+      toast.info('You have already redeemed this book.');
       return;
     }
-    setUserTokens(userTokens - book.tokens);
-    setPurchased([...purchased, book.id]);
-    alert(`Successfully redeemed "${book.title}"!`);
+    
+    try {
+      await redeemTokens(book.tokens);
+      setPurchased([...purchased, book.id]);
+      toast.success(`Successfully redeemed "${book.title}"!`);
+    } catch (error) {
+      console.error("Error redeeming tokens:", error);
+      toast.error("Failed to redeem tokens. Please try again.");
+    }
+  };
+
+  const handleBookTherapist = (therapist) => {
+    if (!account) {
+      toast.error('Please connect your wallet first!');
+      return;
+    }
+    
+    setSelectedTherapist(therapist);
+    setShowBookingModal(true);
+  };
+
+  const confirmBooking = async () => {
+    if (!bookingDate || !bookingTime) {
+      toast.error('Please select both date and time for your session');
+      return;
+    }
+
+    const therapistFee = 50; // 50 tokens per session
+
+    if (userStats.earnedTokens < therapistFee) {
+      toast.error(`Not enough tokens. You need ${therapistFee} tokens to book a session.`);
+      return;
+    }
+
+    try {
+      // Create a fake therapist address for demo purposes
+      const therapistAddress = '0x' + Array(40).fill(0).map(() => Math.floor(Math.random() * 16).toString(16)).join('');
+      
+      await bookTherapist(therapistAddress, therapistFee);
+      setBookedTherapists([...bookedTherapists, selectedTherapist._id]);
+      setShowBookingModal(false);
+      toast.success(`Session booked with ${selectedTherapist.username} on ${bookingDate} at ${bookingTime}!`);
+    } catch (error) {
+      console.error("Error booking therapist:", error);
+      toast.error("Failed to book therapist. Please try again.");
+    }
   };
 
   const UserCard = ({ user, roleColor }) => (
@@ -83,6 +154,24 @@ const RedeemStore = () => {
           <div className="flex items-center text-white/80 text-sm mt-2">
             <Mail className="w-4 h-4 mr-2" />
             {user.email}
+          </div>
+          <div className="mt-4">
+            <p className="text-white/90 mb-2">🔑 50 Tokens per session</p>
+            {bookedTherapists.includes(user._id) ? (
+              <div className="bg-green-600 px-4 py-2 rounded-lg text-white inline-flex items-center">
+                <Calendar className="w-4 h-4 mr-2" />
+                <span>Session Booked</span>
+              </div>
+            ) : (
+              <button
+                onClick={() => handleBookTherapist(user)}
+                className="bg-purple-600 hover:bg-purple-700 px-4 py-2 rounded-lg text-white flex items-center"
+                disabled={blockchainLoading || !account}
+              >
+                {blockchainLoading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Calendar className="w-4 h-4 mr-2" />}
+                Book Session
+              </button>
+            )}
           </div>
         </div>
       </div>
@@ -105,7 +194,7 @@ const RedeemStore = () => {
     <div className="min-h-screen bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-900 text-white px-6 py-12">
       <div className="max-w-6xl mx-auto">
         <h1 className="text-4xl font-bold mb-8 text-center">🎁 Redeem Store</h1>
-        <p className="text-center text-white/80 mb-6">Available Tokens: <span className="font-bold">{userTokens}</span></p>
+        <p className="text-center text-white/80 mb-6">Available Tokens: <span className="font-bold">{account ? userStats.earnedTokens : 0}</span></p>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 mb-16">
           {books.map(book => (
@@ -127,8 +216,10 @@ const RedeemStore = () => {
               ) : (
                 <button
                   onClick={() => handleRedeem(book)}
-                  className="bg-purple-600 hover:bg-purple-700 px-4 py-2 rounded-lg text-white"
+                  className="bg-purple-600 hover:bg-purple-700 px-4 py-2 rounded-lg text-white flex items-center"
+                  disabled={blockchainLoading || !account || userStats.earnedTokens < book.tokens}
                 >
+                  {blockchainLoading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
                   Redeem
                 </button>
               )}
@@ -167,6 +258,56 @@ const RedeemStore = () => {
           </div>
         )}
       </div>
+
+      {/* Booking Modal */}
+      {showBookingModal && (
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50">
+          <div className="bg-white/10 backdrop-blur-lg rounded-xl border border-white/20 p-6 max-w-md w-full">
+            <h3 className="text-2xl font-bold mb-4">Book Session with {selectedTherapist?.username}</h3>
+            <p className="mb-6">Session Fee: 50 Tokens</p>
+            
+            <div className="space-y-4">
+              <div>
+                <label className="block text-white/80 mb-2">Select Date</label>
+                <input 
+                  type="date" 
+                  className="w-full bg-white/10 border border-white/20 rounded-lg p-2 text-white"
+                  value={bookingDate}
+                  onChange={(e) => setBookingDate(e.target.value)}
+                  min={new Date().toISOString().split('T')[0]}
+                />
+              </div>
+              
+              <div>
+                <label className="block text-white/80 mb-2">Select Time</label>
+                <input 
+                  type="time" 
+                  className="w-full bg-white/10 border border-white/20 rounded-lg p-2 text-white"
+                  value={bookingTime}
+                  onChange={(e) => setBookingTime(e.target.value)}
+                />
+              </div>
+            </div>
+            
+            <div className="flex justify-end space-x-4 mt-6">
+              <button 
+                className="px-4 py-2 bg-white/10 hover:bg-white/20 rounded-lg"
+                onClick={() => setShowBookingModal(false)}
+              >
+                Cancel
+              </button>
+              <button 
+                className="px-4 py-2 bg-purple-600 hover:bg-purple-700 rounded-lg flex items-center"
+                onClick={confirmBooking}
+                disabled={blockchainLoading || !bookingDate || !bookingTime}
+              >
+                {blockchainLoading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
+                Confirm Booking
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

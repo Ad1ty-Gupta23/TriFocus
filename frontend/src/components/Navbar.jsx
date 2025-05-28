@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { toast } from "react-toastify";
+import { useHabitBlockchain } from "../context/HabitBlockchainContext";
 
 function Navbar({ isLoggedIn: propIsLoggedIn, user: propUser }) {
   const navigate = useNavigate();
@@ -13,6 +14,9 @@ function Navbar({ isLoggedIn: propIsLoggedIn, user: propUser }) {
   const [role, setRole] = useState(null);
   const [crisisAlerts, setCrisisAlerts] = useState(0);
   const [pendingAppointments, setPendingAppointments] = useState(0);
+
+  // Get blockchain context for token display
+  const { account, userStats, fetchUserStats } = useHabitBlockchain();
 
   // Get current active section from URL
   const getActiveSection = () => {
@@ -53,6 +57,13 @@ function Navbar({ isLoggedIn: propIsLoggedIn, user: propUser }) {
       loadTherapistDashboardData();
     }
   }, [propIsLoggedIn, propUser]);
+
+  // Fetch user stats when wallet is connected
+  useEffect(() => {
+    if (account) {
+      fetchUserStats();
+    }
+  }, [account, fetchUserStats]);
 
   // Update wallet connection state when wallet status changes
   useEffect(() => {
@@ -313,6 +324,21 @@ function Navbar({ isLoggedIn: propIsLoggedIn, user: propUser }) {
 )}
 
           </nav>
+
+          {/* Token Display */}
+          {isWalletConnected && (
+            <div className="flex items-center mr-4">
+              <div className="flex items-center space-x-2 px-3 py-2 bg-gradient-to-r from-purple-500 to-indigo-600 text-white rounded-lg shadow-md">
+                <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2C6.47715 2 2 6.47715 2 12C2 17.5228 6.47715 22 12 22Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                  <path d="M12 17V17.01" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                  <path d="M12 13.5C14.5 13.5 15 12 15 11C15 9.5 13.5 9 12 9C10.5 9 9 9.5 9 11C9 12 9.5 13.5 12 13.5Z" fill="currentColor" stroke="currentColor" strokeWidth="0.5" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+                <span className="font-medium">{userStats.earnedTokens}</span>
+                <span className="text-xs">Tokens</span>
+              </div>
+            </div>
+          )}
 
           {/* Wallet Section */}
           <div className="flex items-center">

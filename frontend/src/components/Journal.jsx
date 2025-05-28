@@ -1,11 +1,58 @@
 // Comprehensive embedded sentiment analysis - no API required
+import React, { useState, useEffect } from 'react';
 import Navbar from './Navbar';
+import { useHabitBlockchain } from '../context/HabitBlockchainContext';
+import { toast } from 'react-toastify';
+
+const Journal = () => {
+  const [activeTab, setActiveTab] = useState('tasks');
+  const [journalEntry, setJournalEntry] = useState('');
+  const [mood, setMood] = useState(3);
+  const [showAddTask, setShowAddTask] = useState(false);
+  const [sentimentAnalysis, setSentimentAnalysis] = useState(null);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [journalHistory, setJournalHistory] = useState([]);
+  const [rewardClaimed, setRewardClaimed] = useState(false);
+  
+  // Get blockchain context
+  const { 
+    account, 
+    connectWallet, 
+    completeTask, 
+    userStats, 
+    loading: blockchainLoading,
+    fetchUserStats 
+  } = useHabitBlockchain();
+  
+  // Fetch user stats when account changes
+  useEffect(() => {
+    if (account) {
+      fetchUserStats();
+    }
+  }, [account, fetchUserStats]);
+
+  const [newTask, setNewTask] = useState({
+    title: '',
+    description: '',
+    tokensReward: 3,
+    deadline: '',
+    priority: 'medium',
+    category: 'wellness'
+  });
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [user, setUser] = useState(null);
+
+  // After successful login:
+  const handleLogin = (userData) => {
+    setIsLoggedIn(true);
+    setUser(userData);
+    localStorage.setItem("user", JSON.stringify(userData));
+  };
+
+
   const analyzeSentiment = async (text) => {
     setIsAnalyzing(true);
-    
-    // Simulate processing time for better UX
     await new Promise(resolve => setTimeout(resolve, 1500));
-    
     const analysis = performEmbeddedSentimentAnalysis(text);
     setIsAnalyzing(false);
     return analysis;
@@ -224,7 +271,7 @@ import Navbar from './Navbar';
     const recommendations = [];
 
     if (riskLevel === 'high') {
-      recommendations.push("🆘 Please consider speaking with a mental health professional or calling a crisis helpline.");
+      recommendations.push("🆘 Please consider speaking with a mental health professional or calling a Crisis helpline.");
       recommendations.push("📞 Crisis Text Line: Text HOME to 741741");
     } else if (riskLevel === 'medium') {
       recommendations.push("💙 Consider reaching out to a trusted friend or counselor.");
@@ -250,52 +297,7 @@ import Navbar from './Navbar';
     }
 
     return recommendations.slice(0, 4);
-  };import React, { useState, useEffect } from 'react';
-
-const Journal = () => {
-  const [activeTab, setActiveTab] = useState('tasks');
-  const [journalEntry, setJournalEntry] = useState('');
-  const [mood, setMood] = useState(3);
-  const [showAddTask, setShowAddTask] = useState(false);
-  const [sentimentAnalysis, setSentimentAnalysis] = useState(null);
-  const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const [journalHistory, setJournalHistory] = useState([]);
-  const [newTask, setNewTask] = useState({
-    title: '',
-    description: '',
-    tokensReward: 3,
-    deadline: '',
-    priority: 'medium',
-    category: 'wellness'
-  });
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [user, setUser] = useState(null);
-
-  // After successful login:
-  const handleLogin = (userData) => {
-    setIsLoggedIn(true);
-    setUser(userData);
-    localStorage.setItem("user", JSON.stringify(userData));
   };
-
-
-  const analyzeSentiment = async (text) => {
-    setIsAnalyzing(true);
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    const analysis = performEmbeddedSentimentAnalysis(text);
-    setIsAnalyzing(false);
-    return analysis;
-  };
-
-  // Add this useEffect to clean up old completed goals
-useEffect(() => {
-  const oneWeekAgo = new Date();
-  oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
-  
-  setCompletedGoals(prev => 
-    prev.filter(goal => new Date(goal.completedDate) > oneWeekAgo)
-  );
-}, []);
 
   const [dailyTasks, setDailyTasks] = useState([
     {
@@ -486,18 +488,37 @@ useEffect(() => {
   };
 
   const handleJournalSubmit = async () => {
-  if (journalEntry.trim()) {
-    setIsAnalyzing(true);
-    const analysis = await analyzeSentiment(journalEntry);
-    setSentimentAnalysis(analysis);
-    setJournalHistory(prev => [...prev, { text: journalEntry, analysis, date: new Date().toLocaleString() }]);
+    if (journalEntry.trim()) {
+      setIsAnalyzing(true);
+      const analysis = await analyzeSentiment(journalEntry);
+      setSentimentAnalysis(analysis);
+      setJournalHistory(prev => [...prev, { text: journalEntry, analysis, date: new Date().toLocaleString() }]);
+      
+      setJournalEntry('');
+      setMood(3);
+      setIsAnalyzing(false);
+      setRewardClaimed(false); // Reset reward claimed status for new entry
+    }
+  };
+
+  // Handle claiming reward for journal entry
+  const handleClaimJournalReward = async () => {
+    if (!account) {
+      toast.error("Please connect your wallet first!");
+      return;
+    }
     
-    setJournalEntry('');
-    setMood(3);
-    setIsAnalyzing(false);
-    
-  }
-};
+    try {
+      // Fixed reward amount for completing a journal entry
+      const rewardAmount = 5; // 5 tokens for a journal entry
+      await completeTask(rewardAmount);
+      setRewardClaimed(true);
+      toast.success(`Successfully claimed ${rewardAmount} tokens for your journal entry!`);
+    } catch (error) {
+      console.error("Error claiming reward:", error);
+      toast.error("Failed to claim tokens. Please try again.");
+    }
+  };
 
   const getProgressPercentage = () => {
     return todayStats.totalTasks > 0 ? (todayStats.tasksCompleted / todayStats.totalTasks) * 100 : 0;
@@ -522,6 +543,36 @@ useEffect(() => {
       {/* Header Stats */}
       <div className="bg-white rounded-2xl shadow-lg p-6 mb-8">
         <h1 className="text-3xl font-bold text-gray-800 mb-4">Daily Wellness Journal</h1>
+        
+        {/* Wallet Connection Status */}
+        <div className="mb-4 bg-gray-50 rounded-lg p-3 border border-gray-200 flex items-center justify-between w-full">
+          {account ? (
+            <>
+              <div className="flex items-center space-x-2">
+                <div className="w-3 h-3 bg-green-400 rounded-full"></div>
+                <span className="text-gray-700 text-sm">
+                  Connected: {account.substring(0, 6)}...{account.substring(account.length - 4)}
+                </span>
+              </div>
+              {userStats && (
+                <div className="text-gray-700 text-sm">
+                  <span className="font-bold">{userStats.tokenBalance}</span> tokens
+                </div>
+              )}
+            </>
+          ) : (
+            <div className="flex items-center justify-between w-full">
+              <span className="text-gray-700 text-sm">Wallet not connected</span>
+              <button 
+                onClick={connectWallet}
+                className="px-3 py-1 bg-indigo-600 hover:bg-indigo-700 text-white text-sm rounded-md transition-colors"
+              >
+                Connect Wallet
+              </button>
+            </div>
+          )}
+        </div>
+        
         <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
           <div className="text-center p-4 bg-gradient-to-r from-green-100 to-emerald-100 rounded-xl">
             <div className="text-2xl font-bold text-green-600">{todayStats.tasksCompleted}</div>
@@ -888,6 +939,37 @@ useEffect(() => {
                     <p><strong>Confidence:</strong> {sentimentAnalysis.confidence}%</p>
                     <p><strong>Key Emotions:</strong> {Object.keys(sentimentAnalysis.emotions).join(', ') || 'None'}</p>
                     <p className="mt-2 text-sm text-gray-600">{sentimentAnalysis.insights[0]}</p>
+                    
+                    {/* Reward Claiming Section */}
+                    {!rewardClaimed && (
+                      <div className="mt-4 text-center">
+                        <button
+                          onClick={handleClaimJournalReward}
+                          disabled={blockchainLoading || !account}
+                          className="px-6 py-2 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-lg font-medium hover:from-green-600 hover:to-emerald-700 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2 mx-auto"
+                        >
+                          {blockchainLoading ? (
+                            <>
+                              <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                              <span>Processing...</span>
+                            </>
+                          ) : (
+                            <>
+                              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                              </svg>
+                              <span>Claim 5 Tokens for Journal Entry</span>
+                            </>
+                          )}
+                        </button>
+                      </div>
+                    )}
+                    
+                    {rewardClaimed && (
+                      <div className="mt-4 text-center bg-green-100 p-3 rounded-lg border border-green-300">
+                        <p className="text-green-700 font-semibold">Tokens claimed successfully!</p>
+                      </div>
+                    )}
                 </div>
                 )}
             </div>
