@@ -34,7 +34,11 @@ const books = [
 ];
 
 const RedeemStore = () => {
-  const [purchased, setPurchased] = useState([]);
+  const [purchased, setPurchased] = useState(() => {
+    // Load purchased books from localStorage
+    const savedPurchases = localStorage.getItem('purchasedBooks');
+    return savedPurchases ? JSON.parse(savedPurchases) : [];
+  });
   const [therapists, setTherapists] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -59,6 +63,11 @@ const RedeemStore = () => {
       fetchUserStats();
     }
   }, [account, fetchUserStats]);
+
+  // Save purchased books to localStorage whenever it changes
+  useEffect(() => {
+    localStorage.setItem('purchasedBooks', JSON.stringify(purchased));
+  }, [purchased]);
 
   useEffect(() => {
     const fetchTherapists = async () => {
