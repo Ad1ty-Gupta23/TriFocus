@@ -279,7 +279,7 @@ function Navbar({ isLoggedIn: propIsLoggedIn, user: propUser }) {
                   <path d="M12 17V17.01" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
                   <path d="M12 13.5C14.5 13.5 15 12 15 11C15 9.5 13.5 9 12 9C10.5 9 9 9.5 9 11C9 12 9.5 13.5 12 13.5Z" fill="currentColor" stroke="currentColor" strokeWidth="0.5" strokeLinecap="round" strokeLinejoin="round"/>
                 </svg>
-                <span className="font-medium">{userData?.earnedTokens ?? 0}</span>
+                <span className="font-medium">{userData?.earnedTokensFormatted ?? 0}</span>
 
                 <span className="text-xs">Tokens</span>
               </div>

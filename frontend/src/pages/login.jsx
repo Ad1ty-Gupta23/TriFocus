@@ -4,12 +4,16 @@ import { Link, useNavigate } from "react-router-dom";
 import styled, { keyframes } from "styled-components";
 import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
+import { useHabitBlockchain } from "../context/HabitBlockchainContext";
+
 
 function Login() {
   const navigate = useNavigate();
   const [values, setValues] = useState({ username: "", password: "" });
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const { activateTherapistOnChain } = useHabitBlockchain();
+
 
   const handleChange = (event) => {
     setValues({ ...values, [event.target.name]: event.target.value });
@@ -29,15 +33,38 @@ function Login() {
     try {
       const res = await axios.post("http://localhost:5000/api/user/login", values);
       if (res.data.success) {
-        updateUser(res.data.user);
+        const user = res.data.user;
+        updateUser(user);
         toast.success("Login successful!");
+      
+        // Set therapist as active
+        if (user.role === "therapist") {
+          try {
+            await axios.patch(`http://localhost:5000/api/user/${user._id}/activate`);
+          } catch (err) {
+            console.error("Error activating therapist:", err);
+            toast.warn("Logged in, but failed to update therapist status");
+          }
+        }
+      
+        if (res.data.user.role === "therapist") {
+          try {
+            await activateTherapistOnChain(); // marks therapist active on blockchain
+            toast.success("Therapist marked active on-chain");
+          } catch (err) {
+            console.error("Error activating therapist on blockchain:", err);
+            toast.warn("Logged in, but failed to activate on-chain");
+          }
+        }
         
         if (res.data.user.role === "admin") {
           navigate("/admin-dashboard");
         } else {
           navigate("/");
         }
-      } else {
+        
+      }
+      else {
         setError(res.data.message || "Login failed. Please try again.");
         toast.error(res.data.message || "Login failed");
       }

@@ -9,7 +9,8 @@ const EyeDetectionTimer = () => {
   const [eyesBlinkedCount, setEyesBlinkedCount] = useState(0);
   const [eyesClosed, setEyesClosed] = useState(false);
   const [timerSeconds, setTimerSeconds] = useState(0);
-  const [isLoading, setIsLoading] = useState(true);
+  const [faceModelLoading, setFaceModelLoading] = useState(true);
+
   const [rewardClaimed, setRewardClaimed] = useState(false);
   const [model, setModel] = useState(null); // Add this missing state
   const [isTimerActive, setIsTimerActive] = useState(false); // Add this missing state
@@ -19,17 +20,19 @@ const EyeDetectionTimer = () => {
     account, 
     connectWallet, 
     completeTask, 
-    userStats, 
-    loading: blockchainLoading,
-    fetchUserStats 
+    loadUserData,
+    userData, 
+    isLoading,
+    displayTokens 
   } = useHabitBlockchain();
+  
   
   // Fetch user stats when account changes
   useEffect(() => {
     if (account) {
-      fetchUserStats();
+      loadUserData();
     }
-  }, [account, fetchUserStats]);
+  }, [account, loadUserData]);
 
   const timerRef = useRef(null);
   const eyesClosedRef = useRef(0);
@@ -82,7 +85,8 @@ const EyeDetectionTimer = () => {
       await setupCamera();
       const loadedModel = await loadFaceLandmarkDetectionModel();
       setModel(loadedModel);
-      setIsLoading(false);
+      setFaceModelLoading(false);
+;
       renderPrediction(loadedModel);
     } catch (error) {
       console.error('Error initializing app:', error);
@@ -92,19 +96,23 @@ const EyeDetectionTimer = () => {
   const setupCamera = async () => {
     const video = videoRef.current;
     const canvas = canvasRef.current;
-    
+  
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ video: true });
       video.srcObject = stream;
-      
+  
       return new Promise((resolve) => {
-        video.onloadedmetadata = () => {
+        video.onloadedmetadata = async () => {
           const videoWidth = video.videoWidth;
           const videoHeight = video.videoHeight;
           video.width = videoWidth;
           video.height = videoHeight;
           canvas.width = videoWidth;
           canvas.height = videoHeight;
+  
+          // 👇 Add this line
+          await video.play();
+  
           resolve(video);
         };
       });
@@ -112,6 +120,7 @@ const EyeDetectionTimer = () => {
       console.error('Error accessing camera:', error);
     }
   };
+  
 
   const loadFaceLandmarkDetectionModel = async () => {
     return window.faceLandmarksDetection.load(
@@ -231,18 +240,19 @@ const EyeDetectionTimer = () => {
       toast.error("Please connect your wallet first!");
       return;
     }
-    
+  
     try {
-      // Use the session duration as the reward amount (minimum 1 token)
       const rewardAmount = Math.max(1, Math.floor(timerSeconds / 60));
       await completeTask(rewardAmount);
+      await loadUserData();
       setRewardClaimed(true);
-      toast.success(`Successfully claimed ${rewardAmount} tokens!`);
+      toast.success(`Successfully claimed ${displayTokens(rewardAmount)}`);
     } catch (error) {
       console.error("Error claiming reward:", error);
       toast.error("Failed to claim tokens. Please try again.");
     }
   };
+  
 
   return (
     <>
@@ -263,11 +273,12 @@ const EyeDetectionTimer = () => {
                 Connected: {account.substring(0, 6)}...{account.substring(account.length - 4)}
               </span>
             </div>
-            {userStats && (
-              <div className="text-white text-sm">
-                <span className="font-bold">{userStats.tokenBalance}</span> tokens
-              </div>
-            )}
+            {account && (
+  <div className="text-white text-sm">
+    <span className="font-bold">{userData?.earnedTokensFormatted}</span> tokens earned
+  </div>
+)}
+
           </>
         ) : (
           <div className="flex items-center justify-between w-full">
@@ -282,7 +293,7 @@ const EyeDetectionTimer = () => {
         )}
       </div>
       
-      {isLoading && (
+      {faceModelLoading && (
         <div className="mb-4">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white mx-auto"></div>
           <p className="text-center mt-2 text-white">Loading face detection model...</p>

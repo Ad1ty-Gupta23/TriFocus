@@ -8,9 +8,9 @@ const CONTRACT_CONFIG = {
   chainId: 17000, // Holesky testnet
   network: "holesky",
   constants: {
-    maxStakeAmount: "1000000000000000000000000", // 1M tokens
-    minSessionFee: "10000000000000000000", // 10 tokens
-    maxHabitReward: "100000000000000000000" // 100 tokens
+    maxStakeAmount: "1000", // 1M tokens
+    minSessionFee: "1", // 10 tokens
+    maxHabitReward: "10" // 100 tokens
   }
 };
 
@@ -41,12 +41,15 @@ export const HabitBlockchainProvider = ({ children }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
   
-  // User data
+  // User data - Store both raw and formatted values
   const [userData, setUserData] = useState({
     stakedTokens: '0',
     earnedTokens: '0',
     habitStreak: 0,
-    isActive: false
+    isActive: false,
+    // Formatted versions for display
+    stakedTokensFormatted: '0',
+    earnedTokensFormatted: '0'
   });
   
   // Therapist data
@@ -54,7 +57,8 @@ export const HabitBlockchainProvider = ({ children }) => {
     name: '',
     sessionCount: 0,
     isActive: false,
-    totalEarnings: '0'
+    totalEarnings: '0',
+    totalEarningsFormatted: '0'
   });
   
   // Bookings
@@ -65,7 +69,10 @@ export const HabitBlockchainProvider = ({ children }) => {
   const [contractStats, setContractStats] = useState({
     totalStaked: '0',
     totalRewards: '0',
-    totalBookings: 0
+    totalBookings: 0,
+    // Formatted versions
+    totalStakedFormatted: '0',
+    totalRewardsFormatted: '0'
   });
 
   // Initialize provider and contract
@@ -139,22 +146,33 @@ export const HabitBlockchainProvider = ({ children }) => {
     
     try {
       const [staked, earned, streak, active] = await contractInstance.getUserData(userAddress);
+      
+      // Format the token amounts for display
+      const stakedFormatted = formatTokenAmount(staked.toString());
+      const earnedFormatted = formatTokenAmount(earned.toString());
+      
       setUserData({
         stakedTokens: staked.toString(),
         earnedTokens: earned.toString(),
         habitStreak: Number(streak),
-        isActive: active
+        isActive: active,
+        // Formatted versions for display
+        stakedTokensFormatted: stakedFormatted,
+        earnedTokensFormatted: earnedFormatted
       });
       
       // Check if user is a therapist
       const [name, sessions, therapistActive] = await contractInstance.getTherapistData(userAddress);
       const rawTherapist = await contractInstance.therapists(userAddress);
       
+      const totalEarningsFormatted = formatTokenAmount(rawTherapist.totalEarnings.toString());
+      
       setTherapistData({
         name,
         sessionCount: Number(sessions),
         isActive: therapistActive,
-        totalEarnings: rawTherapist.totalEarnings.toString()
+        totalEarnings: rawTherapist.totalEarnings.toString(),
+        totalEarningsFormatted
       });
       
       // Load bookings
@@ -177,10 +195,18 @@ export const HabitBlockchainProvider = ({ children }) => {
     
     try {
       const [totalStaked, totalRewards, totalBookings] = await contractInstance.getContractStats();
+      
+      // Format the amounts for display
+      const totalStakedFormatted = formatTokenAmount(totalStaked.toString());
+      const totalRewardsFormatted = formatTokenAmount(totalRewards.toString());
+      
       setContractStats({
         totalStaked: totalStaked.toString(),
         totalRewards: totalRewards.toString(),
-        totalBookings: Number(totalBookings)
+        totalBookings: Number(totalBookings),
+        // Formatted versions
+        totalStakedFormatted,
+        totalRewardsFormatted
       });
     } catch (err) {
       console.error('Error loading contract stats:', err);
@@ -193,6 +219,7 @@ export const HabitBlockchainProvider = ({ children }) => {
     therapist: booking.therapist,
     timestamp: Number(booking.timestamp),
     sessionFee: booking.sessionFee.toString(),
+    sessionFeeFormatted: formatTokenAmount(booking.sessionFee.toString()), // Add formatted version
     encryptedReportCID: booking.encryptedReportCID,
     status: BOOKING_STATUS[booking.status]
   });
@@ -356,12 +383,86 @@ export const HabitBlockchainProvider = ({ children }) => {
 
   // Utility functions
   const formatTokenAmount = (amount, decimals = 18) => {
-    return ethers.formatUnits(amount, decimals);
+    try {
+      // Convert wei to ether and remove trailing zeros
+      const formatted = ethers.formatUnits(amount, decimals);
+      // Remove trailing zeros and decimal point if it's a whole number
+      return parseFloat(formatted).toString();
+    } catch (err) {
+      console.error('Error formatting token amount:', err);
+      return '0';
+    }
   };
 
   const parseTokenAmount = (amount, decimals = 18) => {
     return ethers.parseUnits(amount.toString(), decimals);
   };
+
+  // Enhanced utility function for displaying tokens with custom formatting
+  const displayTokens = (amount, options = {}) => {
+    const {
+      showSymbol = true,
+      symbol = 'HTK', // Habit Token
+      decimals = 2,
+      showZeroAsEmpty = false
+    } = options;
+    
+    const formatted = formatTokenAmount(amount);
+    const numValue = parseFloat(formatted);
+    
+    if (showZeroAsEmpty && numValue === 0) {
+      return '';
+    }
+    
+    const displayValue = decimals > 0 ? numValue.toFixed(decimals).replace(/\.?0+$/, '') : Math.floor(numValue).toString();
+    
+    return showSymbol ? `${displayValue} ${symbol}` : displayValue;
+  };
+  const fetchTherapistAddressesFromEvents = useCallback(async () => {
+    if (!contract || !provider) return [];
+  
+    // ✅ Check localStorage cache
+    const cached = localStorage.getItem("therapistAddresses");
+    if (cached) {
+      try {
+        return JSON.parse(cached);
+      } catch (err) {
+        console.error("Failed to parse cached therapists:", err);
+      }
+    }
+  
+    try {
+      const filter = contract.filters.TherapistRegistered();
+      const latestBlock = await provider.getBlockNumber();
+      const chunkSize = 10000;
+      const startBlock = Math.max(latestBlock - 200000, 0); // recent blocks only
+  
+      let addresses = new Set();
+  
+      for (let fromBlock = startBlock; fromBlock <= latestBlock; fromBlock += chunkSize) {
+        const toBlock = Math.min(fromBlock + chunkSize - 1, latestBlock);
+        const events = await contract.queryFilter(filter, fromBlock, toBlock);
+  
+        events.forEach((event) => {
+          addresses.add(event.args.therapist.toLowerCase());
+        });
+      }
+  
+      const addressArray = Array.from(addresses);
+  
+      // ✅ Save to localStorage
+      localStorage.setItem("therapistAddresses", JSON.stringify(addressArray));
+  
+      return addressArray;
+    } catch (err) {
+      console.error("Error fetching therapist registration events:", err);
+      return [];
+    }
+  }, [contract, provider]);
+  
+  
+  
+  
 
   // Handle account changes
   useEffect(() => {
@@ -447,10 +548,12 @@ export const HabitBlockchainProvider = ({ children }) => {
     bookTherapist,
     cancelBooking,
     uploadEncryptedReport,
+    fetchTherapistAddressesFromEvents,
     
     // Utilities
     formatTokenAmount,
     parseTokenAmount,
+    displayTokens, // New enhanced display function
     BOOKING_STATUS
   };
 

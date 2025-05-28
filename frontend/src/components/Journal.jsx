@@ -19,10 +19,11 @@ const Journal = () => {
     account, 
     connectWallet, 
     completeTask, 
-    userStats, 
-    loading: blockchainLoading,
+    userData, 
+    isLoading: blockchainLoading,
     loadUserData 
   } = useHabitBlockchain();
+  
   
   // Fetch user stats when account changes
   useEffect(() => {
@@ -512,8 +513,10 @@ const Journal = () => {
       // Fixed reward amount for completing a journal entry
       const rewardAmount = 5; // 5 tokens for a journal entry
       await completeTask(rewardAmount);
+      await loadUserData();
       setRewardClaimed(true);
-      toast.success(`Successfully claimed ${rewardAmount} tokens for your journal entry!`);
+      toast.success(`Successfully claimed ${displayTokens(rewardAmount)} for your journal entry!`);
+
     } catch (error) {
       console.error("Error claiming reward:", error);
       toast.error("Failed to claim tokens. Please try again.");
@@ -554,11 +557,12 @@ const Journal = () => {
                   Connected: {account.substring(0, 6)}...{account.substring(account.length - 4)}
                 </span>
               </div>
-              {userStats && (
-                <div className="text-gray-700 text-sm">
-                  <span className="font-bold">{userStats.tokenBalance}</span> tokens
-                </div>
-              )}
+              {userData && (
+  <div className="text-gray-700 text-sm">
+    <span className="font-bold">{userData.earnedTokensFormatted}</span> tokens
+  </div>
+)}
+
             </>
           ) : (
             <div className="flex items-center justify-between w-full">
@@ -979,6 +983,9 @@ const Journal = () => {
     </div>
     </>
   );
+
+  
+  
 };
 
 export default Journal;

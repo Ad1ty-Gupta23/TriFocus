@@ -3,12 +3,25 @@ import { Link } from "react-router-dom";
 import { toast } from "react-toastify";
 import Navbar from "../components/Navbar";
 import Chatbot from "../components/Chatbot";
+import { useHabitBlockchain } from "../context/HabitBlockchainContext"; // Import blockchain context
 
 function Home() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [user, setUser] = useState(null);
   const [activeSection, setActiveSection] = useState("meditation");
   const [isWalletConnected, setIsWalletConnected] = useState(false);
+
+  // Get blockchain context
+  const {
+    isConnected,
+    account,
+    therapistData,
+    isLoading,
+    error,
+    deactivateTherapist,
+    reactivateTherapist,
+    loadUserData
+  } = useHabitBlockchain();
 
   useEffect(() => {
     const userInfo = localStorage.getItem("user");
@@ -27,6 +40,11 @@ function Home() {
     };
   }, []);
 
+  // Update wallet connection state based on blockchain context
+  useEffect(() => {
+    setIsWalletConnected(isConnected);
+  }, [isConnected]);
+
   const checkWalletConnection = async () => {
     try {
       const { ethereum } = window;
@@ -44,6 +62,31 @@ function Home() {
   const handleWalletConnected = () => setIsWalletConnected(true);
   const handleWalletDisconnected = () => setIsWalletConnected(false);
   const handleSectionChange = (section) => setActiveSection(section);
+
+  // Handle therapist account activation/deactivation
+  const handleActivateAccount = async () => {
+    try {
+      const txHash = await reactivateTherapist();
+      toast.success(`Account activated successfully! Transaction: ${txHash.slice(0, 10)}...`);
+      // Reload user data to update the UI
+      await loadUserData();
+    } catch (err) {
+      toast.error(`Failed to activate account: ${err.message}`);
+    }
+  };
+
+  const handleDeactivateAccount = async () => {
+    if (window.confirm("Are you sure you want to deactivate your therapist account? You won't receive new bookings while inactive.")) {
+      try {
+        const txHash = await deactivateTherapist();
+        toast.success(`Account deactivated successfully! Transaction: ${txHash.slice(0, 10)}...`);
+        // Reload user data to update the UI
+        await loadUserData();
+      } catch (err) {
+        toast.error(`Failed to deactivate account: ${err.message}`);
+      }
+    }
+  };
 
   // Professional color scheme
   const colors = {
@@ -111,6 +154,7 @@ function Home() {
               )}
             </div>
             
+            {/* Wallet Connection Status */}
             {!isWalletConnected && isLoggedIn && (
               <div className="pt-4">
                 <div className="inline-flex items-center px-4 py-2 bg-indigo-800 bg-opacity-50 rounded-lg text-indigo-100 text-sm">
@@ -118,6 +162,65 @@ function Home() {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
                   Connect your wallet to unlock all features
+                </div>
+              </div>
+            )}
+
+            {/* Therapist Account Controls - Only show if wallet is connected and user has therapist data */}
+            {isWalletConnected && isLoggedIn && therapistData.name && (
+              <div className="pt-4">
+                <div className="bg-indigo-800 bg-opacity-50 rounded-lg p-4 max-w-md mx-auto">
+                  <div className="flex items-center justify-between mb-3">
+                    <span className="text-indigo-100 text-sm font-medium">
+                      Therapist Account: {therapistData.name}
+                    </span>
+                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                      therapistData.isActive 
+                        ? 'bg-green-500 bg-opacity-20 text-green-200' 
+                        : 'bg-red-500 bg-opacity-20 text-red-200'
+                    }`}>
+                      {therapistData.isActive ? 'Active' : 'Inactive'}
+                    </span>
+                  </div>
+                  
+                  <div className="flex gap-2">
+                    {therapistData.isActive ? (
+                      <button
+                        onClick={handleDeactivateAccount}
+                        disabled={isLoading}
+                        className="flex-1 px-4 py-2 bg-red-600 hover:bg-red-700 disabled:bg-red-400 text-white text-sm font-medium rounded-lg transition-colors duration-200 disabled:cursor-not-allowed"
+                      >
+                        {isLoading ? 'Processing...' : 'Deactivate Account'}
+                      </button>
+                    ) : (
+                      <button
+                        onClick={handleActivateAccount}
+                        disabled={isLoading}
+                        className="flex-1 px-4 py-2 bg-green-600 hover:bg-green-700 disabled:bg-green-400 text-white text-sm font-medium rounded-lg transition-colors duration-200 disabled:cursor-not-allowed"
+                      >
+                        {isLoading ? 'Processing...' : 'Activate Account'}
+                      </button>
+                    )}
+                  </div>
+                  
+                  {therapistData.sessionCount > 0 && (
+                    <div className="mt-2 text-indigo-200 text-xs">
+                      Sessions completed: {therapistData.sessionCount} | 
+                      Total earnings: {therapistData.totalEarningsFormatted} HTK
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Error Display */}
+            {error && (
+              <div className="pt-4">
+                <div className="inline-flex items-center px-4 py-2 bg-red-800 bg-opacity-50 rounded-lg text-red-100 text-sm">
+                  <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  {error}
                 </div>
               </div>
             )}
@@ -402,47 +505,56 @@ function Home() {
                 <li><Link to="/about" className="text-gray-400 hover:text-white transition-colors">About Us</Link></li>
                 <li><Link to="/blog" className="text-gray-400 hover:text-white transition-colors">Blog</Link></li>
                 <li><Link to="/careers" className="text-gray-400 hover:text-white transition-colors">Careers</Link></li>
+                <li><Link to="/contact" className="text-gray-400 hover:text-white transition-colors">Contact</Link></li>
               </ul>
             </div>
             
             <div>
-              <h4 className="text-lg font-semibold mb-4 text-gray-200">Legal</h4>
+              <h4 className="text-lg font-semibold mb-4 text-gray-200">Support</h4>
               <ul className="space-y-2">
+                <li><Link to="/help" className="text-gray-400 hover:text-white transition-colors">Help Center</Link></li>
                 <li><Link to="/privacy" className="text-gray-400 hover:text-white transition-colors">Privacy Policy</Link></li>
                 <li><Link to="/terms" className="text-gray-400 hover:text-white transition-colors">Terms of Service</Link></li>
-                <li><Link to="/cookies" className="text-gray-400 hover:text-white transition-colors">Cookie Policy</Link></li>
+                <li><Link to="/whitepaper" className="text-gray-400 hover:text-white transition-colors">Whitepaper</Link></li>
               </ul>
             </div>
           </div>
           
-          <div className="border-t border-gray-800 pt-8 flex flex-col md:flex-row justify-between items-center">
-            <p className="text-gray-500 mb-4 md:mb-0">© 2024 Trifocus. All rights reserved.</p>
-            <div className="flex space-x-6">
-              <Link to="#" className="text-gray-400 hover:text-white transition-colors">
-                <span className="sr-only">Twitter</span>
-                <svg className="h-6 w-6" fill="currentColor" viewBox="0 0 24 24">
-                  <path d="M8.29 20.251c7.547 0 11.675-6.253 11.675-11.675 0-.178 0-.355-.012-.53A8.348 8.348 0 0022 5.92a8.19 8.19 0 01-2.357.646 4.118 4.118 0 001.804-2.27 8.224 8.224 0 01-2.605.996 4.107 4.107 0 00-6.993 3.743 11.65 11.65 0 01-8.457-4.287 4.106 4.106 0 001.27 5.477A4.072 4.072 0 012.8 9.713v.052a4.105 4.105 0 003.292 4.022 4.095 4.095 0 01-1.853.07 4.108 4.108 0 003.834 2.85A8.233 8.233 0 012 18.407a11.616 11.616 0 006.29 1.84" />
-                </svg>
-              </Link>
-              <Link to="https://github.com/" className="text-gray-400 hover:text-white transition-colors">
-                <span className="sr-only">GitHub</span>
-                <svg className="h-6 w-6" fill="currentColor" viewBox="0 0 24 24">
-                  <path fillRule="evenodd" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z" clipRule="evenodd" />
-                </svg>
-              </Link>
-              <Link to="" className="text-gray-400 hover:text-white transition-colors">
-                <span className="sr-only">Discord</span>
-                <svg className="h-6 w-6" fill="currentColor" viewBox="0 0 24 24">
-                  <path d="M20.317 4.37a19.791 19.791 0 00-4.885-1.515.074.074 0 00-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 00-5.487 0 12.64 12.64 0 00-.617-1.25.077.077 0 00-.079-.037A19.736 19.736 0 003.677 4.37a.07.07 0 00-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 00.031.057 19.9 19.9 0 005.993 3.03.078.078 0 00.084-.028c.462-.63.874-1.295 1.226-1.994a.076.076 0 00-.041-.106 13.107 13.107 0 01-1.872-.892.077.077 0 01-.008-.128 10.2 10.2 0 00.372-.292.074.074 0 01.077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 01.078.01c.12.098.246.198.373.292a.077.077 0 01-.006.127 12.299 12.299 0 01-1.873.892.077.077 0 00-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 00.084.028 19.839 19.839 0 006.002-3.03.077.077 0 00.032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 00-.031-.03zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.946 2.418-2.157 2.418z" />
-                </svg>
-              </Link>
+          <div className="border-t border-gray-800 pt-8">
+            <div className="flex flex-col md:flex-row justify-between items-center">
+              <div className="text-gray-400 text-sm mb-4 md:mb-0">
+                © 2024 Trifocus. All rights reserved.
+              </div>
+              
+              <div className="flex space-x-6">
+                <a href="#" className="text-gray-400 hover:text-white transition-colors">
+                  <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M24 4.557c-.883.392-1.832.656-2.828.775 1.017-.609 1.798-1.574 2.165-2.724-.951.564-2.005.974-3.127 1.195-.897-.957-2.178-1.555-3.594-1.555-3.179 0-5.515 2.966-4.797 6.045-4.091-.205-7.719-2.165-10.148-5.144-1.29 2.213-.669 5.108 1.523 6.574-.806-.026-1.566-.247-2.229-.616-.054 2.281 1.581 4.415 3.949 4.89-.693.188-1.452.232-2.224.084.626 1.956 2.444 3.379 4.6 3.419-2.07 1.623-4.678 2.348-7.29 2.04 2.179 1.397 4.768 2.212 7.548 2.212 9.142 0 14.307-7.721 13.995-14.646.962-.695 1.797-1.562 2.457-2.549z"/>
+                  </svg>
+                </a>
+                <a href="#" className="text-gray-400 hover:text-white transition-colors">
+                  <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M22.46 6c-.77.35-1.6.58-2.46.69.88-.53 1.56-1.37 1.88-2.38-.83.5-1.75.85-2.72 1.05C18.37 4.5 17.26 4 16 4c-2.35 0-4.27 1.92-4.27 4.29 0 .34.04.67.11.98C8.28 9.09 5.11 7.38 3 4.79c-.37.63-.58 1.37-.58 2.15 0 1.49.75 2.81 1.91 3.56-.71 0-1.37-.2-1.95-.5v.03c0 2.08 1.48 3.82 3.44 4.21a4.22 4.22 0 0 1-1.93.07 4.28 4.28 0 0 0 4 2.98 8.521 8.521 0 0 1-5.33 1.84c-.34 0-.68-.02-1.02-.06C3.44 20.29 5.7 21 8.12 21 16 21 20.33 14.46 20.33 8.79c0-.19 0-.37-.01-.56.84-.6 1.56-1.36 2.14-2.23z"/>
+                  </svg>
+                </a>
+                <a href="#" className="text-gray-400 hover:text-white transition-colors">
+                  <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/>
+                  </svg>
+                </a>
+                <a href="#" className="text-gray-400 hover:text-white transition-colors">
+                  <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M12.017 0C5.396 0 .029 5.367.029 11.987c0 5.079 3.158 9.417 7.618 11.174-.105-.949-.199-2.403.041-3.439.219-.937 1.406-5.957 1.406-5.957s-.359-.72-.359-1.781c0-1.663.967-2.911 2.168-2.911 1.024 0 1.518.769 1.518 1.688 0 1.029-.653 2.567-.992 3.992-.285 1.193.6 2.165 1.775 2.165 2.128 0 3.768-2.245 3.768-5.487 0-2.861-2.063-4.869-5.008-4.869-3.41 0-5.409 2.562-5.409 5.199 0 1.033.394 2.143.889 2.741.099.12.112.225.085.345-.09.375-.293 1.199-.334 1.363-.053.225-.172.271-.402.165-1.495-.69-2.433-2.878-2.433-4.646 0-3.776 2.748-7.252 7.92-7.252 4.158 0 7.392 2.967 7.392 6.923 0 4.135-2.607 7.462-6.233 7.462-1.214 0-2.357-.629-2.75-1.378l-.748 2.853c-.271 1.043-1.002 2.35-1.492 3.146C9.57 23.812 10.763 24.009 12.017 24.009c6.624 0 11.99-5.367 11.99-11.988C24.007 5.367 18.641.001.012.001z"/>
+                  </svg>
+                </a>
+              </div>
             </div>
           </div>
         </div>
       </footer>
 
-      {/* Chatbot */}
-      <Chatbot />
+      {/* Chatbot Component */}
+      {isLoggedIn && <Chatbot />}
     </div>
   );
 }
