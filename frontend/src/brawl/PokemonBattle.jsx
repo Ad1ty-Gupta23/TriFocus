@@ -3,6 +3,9 @@ import BattleUI from './BattleUI';
 import { pokemonData } from './pokemonBrawlData';
 import { specialCards } from './specialCards';
 import './PokemonBrawl.css';
+import { useHabitBlockchain } from '../context/HabitBlockchainContext';
+import { toast } from 'react-toastify';
+
 
 const PokemonBattle = () => {
   // Game state
@@ -31,6 +34,10 @@ const PokemonBattle = () => {
   const [selectedCard, setSelectedCard] = useState(null);
   const [gameOver, setGameOver] = useState(false);
   const [gameWon, setGameWon] = useState(false);
+  const { account, completeTask, userData } = useHabitBlockchain();
+  const [rewardClaimed, setRewardClaimed] = useState(false);
+  const [claimingReward, setClaimingReward] = useState(false);
+
   
   // Initialize enemy based on current level
   useEffect(() => {
@@ -73,6 +80,36 @@ const PokemonBattle = () => {
     
     setAvailableCards(cards);
   };
+
+  const handleClaimReward = async () => {
+  if (!account) {
+    toast.warning("Connect your wallet to claim rewards");
+    return;
+  }
+  if (!userData?.isActive) {
+    toast.warning("Stake tokens to activate your account");
+    return;
+  }
+  
+  setClaimingReward(true); // Add this line
+  
+  try {
+    const reward = Math.floor(currentLevel * 2);
+    if (reward === 0) {
+      toast.info("Play more to earn rewards!");
+      return;
+    }
+    await completeTask(reward);
+    toast.success(`🎉 You earned ${reward} tokens!`);
+    setRewardClaimed(true);
+  } catch (err) {
+    console.error(err);
+    toast.error("Failed to claim reward");
+  } finally {
+    setClaimingReward(false); // Add this line
+  }
+};
+
 
   // Update cards after selection, keeping 2 existing cards and drawing a new one
   const updateCardsAfterSelection = () => {
@@ -573,39 +610,74 @@ const PokemonBattle = () => {
     setBattleLog([]);
     setGameOver(false);
     setGameWon(false);
+    setRewardClaimed(false);
+    setClaimingReward(false);
   };
 
-  return (
-    <div className="pokemon-battle-container">
-      <h1 className="battle-title">Pokémon RPG Battle</h1>
-      
-      {gameWon && (
-        <div className="game-won-message">
-          <h2>Congratulations! You've completed the game!</h2>
-          <button className="reset-button" onClick={resetGame}>Play Again</button>
-        </div>
+ return (
+  <div className="pokemon-battle-container">
+    <h1 className="battle-title">Pokémon RPG Battle</h1>
+
+    {gameWon && (
+      <div className="game-won-message">
+        <h2>Congratulations! You've completed the game!</h2>
+
+        {!rewardClaimed ? (
+  <button 
+    className={`claim-reward-btn ${claimingReward ? 'claiming' : ''}`}
+    onClick={handleClaimReward}
+    disabled={claimingReward}
+  >
+    <span className="btn-content">
+      {claimingReward ? (
+        <>
+          <span className="spinner"></span>
+          Claiming Tokens...
+        </>
+      ) : (
+        <>
+          <span className="reward-icon">🎁</span>
+          Claim Your Reward
+          <span className="coins">💰</span>
+        </>
       )}
-      
-      {!gameWon && (
-        <BattleUI
-          playerPokemon={playerPokemon}
-          enemyPokemon={enemyPokemon}
-          battleActive={battleActive}
-          playerTurn={playerTurn}
-          battleLog={battleLog}
-          availableCards={availableCards}
-          currentLevel={currentLevel}
-          gameOver={gameOver}
-          onAttack={handleAttack}
-          onDefend={handleDefend}
-          onCardSelect={handleCardSelect}
-          onStartBattle={startBattle}
-          onReset={resetGame}
-          selectedCard={selectedCard}
-        />
-      )}
-    </div>
-  );
+    </span>
+  </button>
+) : (
+  <div className="reward-claimed">
+    <span className="success-icon">✅</span>
+    <p>Reward Claimed Successfully!</p>
+    <div className="celebration">🎉</div>
+  </div>
+)}
+
+        <button className="reset-button mt-4" onClick={resetGame}>
+          Play Again
+        </button>
+      </div>
+    )}
+
+    {!gameWon && (
+      <BattleUI
+        playerPokemon={playerPokemon}
+        enemyPokemon={enemyPokemon}
+        battleActive={battleActive}
+        playerTurn={playerTurn}
+        battleLog={battleLog}
+        availableCards={availableCards}
+        currentLevel={currentLevel}
+        gameOver={gameOver}
+        onAttack={handleAttack}
+        onDefend={handleDefend}
+        onCardSelect={handleCardSelect}
+        onStartBattle={startBattle}
+        onReset={resetGame}
+        selectedCard={selectedCard}
+      />
+    )}
+  </div>
+);
+
 };
 
 export default PokemonBattle;

@@ -1,4 +1,7 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
+import { useHabitBlockchain } from '../context/HabitBlockchainContext';
+import { toast } from 'react-toastify';
+
 
 const FRUIT_SIZE = 40;
 const BASKET_WIDTH = 120;
@@ -54,12 +57,26 @@ export default function Game() {
   const [effects, setEffects] = useState([]);
   const gameAreaRef = useRef();
   const keysPressed = useRef(new Set());
+  const { account, connectWallet, userData, completeTask, isLoading, loadUserData } = useHabitBlockchain();
+  const [rewardClaimed, setRewardClaimed] = useState(false);
+  const [isClaiming, setIsClaiming] = useState(false);
+  const [sessionComplete, setSessionComplete] = useState(false);
+
+
+  
+
+
 
   // Initialize high score
   useEffect(() => {
     const saved = JSON.parse(sessionStorage.getItem('fruitCatcherData') || '{"highScore": 0}');
     setHighScore(saved.highScore);
   }, []);
+
+  useEffect(() => {
+  if (account) loadUserData();
+}, [account, loadUserData]);
+
 
   // Update high score and level
   useEffect(() => {
@@ -117,6 +134,39 @@ export default function Game() {
       setGameStarted(true);
     }
   }, [gameOver, gameStarted]);
+
+  const handleClaimReward = async () => {
+  if (!account) {
+    toast.warning("Connect your wallet to claim rewards");
+    return;
+  }
+
+  if (!userData?.isActive) {
+    toast.warning("Stake tokens to activate your account");
+    return;
+  }
+
+  const reward = Math.floor(score / 100);
+  if (reward === 0) {
+    toast.info("Score too low for reward");
+    return;
+  }
+
+  setIsClaiming(true); // ⏳ Start loading
+  try {
+    await completeTask(reward);
+    await loadUserData();
+    toast.success(`🎉 You earned ${reward} tokens!`);
+    setRewardClaimed(true);
+    setSessionComplete(false);
+  } catch (err) {
+    console.error(err);
+    toast.error("Failed to claim reward");
+  } finally {
+    setIsClaiming(false); // ✅ Stop loading
+  }
+};
+
 
   const handleKeyUp = useCallback((e) => {
     keysPressed.current.delete(e.key);
@@ -248,11 +298,13 @@ export default function Game() {
   }, [basketX, gameOver, gameStarted, isPaused, level, combo, addParticles, showEffect]);
 
   useEffect(() => {
-    if (missed >= 5) {
-      setGameOver(true);
-      showEffect('GAME OVER', 'text-red-400', 'animate-pulse');
-    }
-  }, [missed, showEffect]);
+  if (missed >= 5) {
+    setGameOver(true);
+    setSessionComplete(true); // <== ADD THIS LINE
+    showEffect('GAME OVER', 'text-red-400', 'animate-pulse');
+  }
+}, [missed, showEffect]);
+
 
   const resetGame = () => {
     setScore(0);
@@ -369,23 +421,53 @@ export default function Game() {
 
         {/* Game Over Screen */}
         {gameOver && (
-          <div className="absolute inset-0 flex flex-col items-center justify-center bg-black bg-opacity-80 backdrop-blur-sm text-white p-6">
-            <h2 className="text-5xl font-bold mb-4 text-red-400 animate-pulse">Game Over!</h2>
-            <div className="bg-white bg-opacity-10 p-6 rounded-xl mb-6 text-center">
-              <p className="text-3xl mb-2">Final Score: <span className="text-yellow-400">{score.toLocaleString()}</span></p>
-              <p className="text-xl mb-2">Level Reached: <span className="text-blue-400">{level}</span></p>
-              <p className="text-lg mb-4">High Score: <span className="text-green-400">{highScore.toLocaleString()}</span></p>
-              {score === highScore && score > 0 && (
-                <p className="text-lg text-yellow-300 animate-bounce">🎉 NEW HIGH SCORE! 🎉</p>
-              )}
-            </div>
-            <button 
-              onClick={resetGame}
-              className="px-8 py-4 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 rounded-xl font-bold text-xl transition-all duration-300 transform hover:scale-105 shadow-lg"
-            >
-              Play Again (R)
-            </button>
-          </div>
+          <div className="absolute inset-0 flex flex-col items-center justify-center bg-black bg-opacity-80 backdrop-blur-sm text-white p-8 rounded-xl shadow-2xl border border-purple-500">
+  <h2 className="text-5xl font-extrabold mb-6 text-red-500 animate-pulse drop-shadow">Game Over!</h2>
+
+  <div className="bg-gradient-to-r from-purple-700 via-indigo-800 to-blue-900 bg-opacity-70 p-6 rounded-2xl mb-6 text-center w-72 shadow-inner border border-white/20">
+    <p className="text-2xl font-bold mb-4 text-yellow-300">
+  Final Score: <span className="text-white">{score.toLocaleString()}</span>
+</p>
+
+    <p className="text-lg font-medium text-blue-300">Level: <span className="text-blue-400">{level}</span></p>
+    <p className="text-lg font-medium text-green-300">High Score: <span className="text-green-400">{highScore.toLocaleString()}</span></p>
+
+    {score === highScore && score > 0 && (
+      <p className="text-md text-pink-400 mt-3 font-semibold animate-bounce">🎉 New High Score! 🎉</p>
+    )}
+  </div>
+
+  {!rewardClaimed && sessionComplete && (
+  <button
+    onClick={handleClaimReward}
+    disabled={isClaiming}
+    className="bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 px-6 py-2 rounded-xl text-white font-semibold transition-all duration-200 shadow-lg hover:shadow-green-500/20 disabled:opacity-50 flex items-center justify-center mx-auto"
+  >
+    {isClaiming ? (
+      <span className="flex items-center">
+        <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+        </svg>
+        Claiming...
+      </span>
+    ) : (
+      `Claim ${Math.floor(score / 100)} Tokens`
+    )}
+  </button>
+)}
+
+
+
+<button 
+  onClick={resetGame}
+  className="px-10 py-3 bg-gradient-to-br from-green-500 to-lime-500 hover:from-green-600 hover:to-lime-600 text-black font-bold text-lg rounded-full transition-all duration-300 transform hover:scale-105 shadow-md"
+>
+  🔄 Play Again (R)
+</button>
+
+</div>
+
         )}
 
         {/* Enhanced Start Screen */}
