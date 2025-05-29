@@ -172,7 +172,7 @@ function Home() {
                 <div className="bg-indigo-800 bg-opacity-50 rounded-lg p-4 max-w-md mx-auto">
                   <div className="flex items-center justify-between mb-3">
                     <span className="text-indigo-100 text-sm font-medium">
-                      Therapist Account: {therapistData.name}
+                       Account: {therapistData.name}
                     </span>
                     <span className={`px-2 py-1 rounded-full text-xs font-medium ${
                       therapistData.isActive 

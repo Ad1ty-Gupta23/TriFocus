@@ -375,7 +375,7 @@ const RedeemStore = () => {
         <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50">
           <div className="bg-white/10 backdrop-blur-lg rounded-xl border border-white/20 p-6 max-w-md w-full">
             <h3 className="text-2xl font-bold mb-4">Book Session with {selectedTherapist.username}</h3>
-            <p className="mb-4">Session Fee: 50 Tokens</p>
+            <p className="mb-4">Session Fee: 12 Tokens</p>
             <p className="mb-6 text-green-400 font-semibold">✅ Booking will be marked as "Completed" immediately</p>
             
             <div className="space-y-4">

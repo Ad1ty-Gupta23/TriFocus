@@ -90,19 +90,12 @@ Users interact with on-chain logic for:
 ## 🗂️ 7. Medical Document Control  
 
 - Upload reports and mental health records to **IPFS**  
-- Share only with verified therapists using **private keys**  
+- Share only with connected Volunteers using **publickeys keys**  
 - Access governed by **smart contract permissions**  
 
 ---
 
-## 📱 8. Fitbit API Integration  
 
-- Fetch real-time:  
-  - Daily steps  
-  - Sleep hours  
-  - Heart rate trends  
-- Meet activity targets → claim wellness tokens  
-- **Bio + behavior = holistic wellness tracking**  
 
 ---
 
