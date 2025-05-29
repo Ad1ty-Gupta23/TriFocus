@@ -22,6 +22,24 @@ const meditationOptions = [
     isPopular: true
   },
   {
+    id: 'prescription-analysis',
+    title: 'Prescription Analysis',
+    description: 'Analyze professional medical prescriptions with doctor info, patient details, and medication management. Perfect for healthcare professionals.',
+    category: 'Medical Tools',
+    difficulty: 'Medium',
+    players: '1 Player',
+    rating: 4.8,
+    plays: 12456,
+    tags: ['Medical', 'Prescription', 'Healthcare'],
+    gradient: 'from-purple-500 to-pink-500',
+    icon: '💊',
+    route: '/crisis',
+    features: ['PDF Generation', 'Doctor Profiles', 'Medication Database'],
+    screenshots: ['💊📋👨‍⚕️', '📄💼🏥'],
+    isNew: true,
+    isPopular: true
+  },
+  {
     id: 'forest-focus',
     title: 'Forest Focus Timer',
     description: 'Stay focused and grow your virtual forest. Earn tokens for every completed focus session!',

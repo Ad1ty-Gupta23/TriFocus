@@ -53,10 +53,11 @@ function TherapistAppointments() {
     isLoading: contextLoading
   } = useHabitBlockchain();
   const statusMap = {
-    0: "pending",
-    1: "completed",
-    2: "cancelled"
+    "Pending": "pending",
+    "Completed": "completed", 
+    "Cancelled": "cancelled"
   };
+  
 
   useEffect(() => {
     loadAppointments();
@@ -207,22 +208,24 @@ function TherapistAppointments() {
 
   const canCancelAppointment = (appointment) => {
     const uiStatus = appointment.status?.toLowerCase();
-    const blockchainStatus = appointment.originalBooking?.status;
+    // Get the original numeric status from the booking data
+    const originalStatus = appointment.originalBooking?.status;
+    
     
     return (
       uiStatus === "pending" && 
-      blockchainStatus === 0 && 
+      (originalStatus === 0 || originalStatus === "Pending") && 
       !appointment.originalBooking.encryptedReportCID
     );
   };
   
   const canUploadReport = (appointment) => {
     const uiStatus = appointment.status?.toLowerCase();
-    const blockchainStatus = appointment.originalBooking?.status;
+    const originalStatus = appointment.originalBooking?.status;
     
     return (
       uiStatus === "pending" && 
-      blockchainStatus === 0 && 
+      (originalStatus === 0 || originalStatus === "Pending") && 
       !appointment.originalBooking.encryptedReportCID
     );
   };

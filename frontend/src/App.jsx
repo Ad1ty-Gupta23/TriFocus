@@ -21,6 +21,8 @@ import CombinedStorePage from './pages/CombinedStorePage.jsx'
 import { HabitBlockchainProvider } from './context/HabitBlockchainContext.jsx';
 import IPFSUploader from './components/IPFSUploader.jsx';
 import UserDashboard from './components/UserDashBoard.jsx'
+import TherapistVolunteerGenerator from './components/Prescription.jsx';
+
 function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [user, setUser] = useState(null);
@@ -47,20 +49,17 @@ function App() {
         <Route path="/pokemon" element={<PokemonBattle />}></Route>
         <Route path="/therapist" element={<TherapistList />}></Route>
         <Route path="/games" element={<GamesHub />}></Route>
-        <Route 
-            path="/journal" 
-            element={ <Journal user={user} />} 
-          />
+        <Route path="/journal" element={ <Journal user={user} />} />
           <Route path="/forest" element={<FocusForestTimer />}></Route>
           <Route path="/cosmic" element={<CosmicDefender />}></Route>
         <Route path="/appointments" element={<TherapistAppointments />} />
         <Route path="/patient-files" element={<PatientFiles />} />  
-        
           <Route path="/crisis" element={<MedicalReportAnalyzer />}></Route>
         <Route path="/meditation" element={<MeditationHome />}></Route>
         <Route path='/redeem' element={<CombinedStorePage />}></Route>
         <Route path='/upload' element={<IPFSUploader />}></Route>
         <Route path="/usedash" element={<UserDashboard />} ></Route>
+        <Route path="/generator" element={<TherapistVolunteerGenerator />}></Route>
       </Routes>
     </BrowserRouter>
     </HabitBlockchainProvider>
