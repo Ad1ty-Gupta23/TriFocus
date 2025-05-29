@@ -665,3 +665,119 @@
     gap: 10px;
   }
 }
+
+.claim-reward-btn {
+  background: linear-gradient(45deg, #FFD700, #FFA500, #FF8C00);
+  border: none;
+  padding: 16px 32px;
+  border-radius: 50px;
+  font-size: 18px;
+  font-weight: bold;
+  color: white;
+  text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 8px 25px rgba(255, 165, 0, 0.4);
+  transition: all 0.3s ease;
+  animation: pulse-glow 2s infinite;
+}
+
+.claim-reward-btn:hover:not(:disabled) {
+  transform: translateY(-3px);
+  box-shadow: 0 12px 35px rgba(255, 165, 0, 0.6);
+  background: linear-gradient(45deg, #FFE55C, #FFB347, #FF7F50);
+}
+
+.claim-reward-btn:disabled {
+  opacity: 0.8;
+  cursor: not-allowed;
+  animation: none;
+}
+
+.claim-reward-btn.claiming {
+  background: linear-gradient(45deg, #9CA3AF, #6B7280);
+  animation: claiming-shimmer 1.5s infinite;
+}
+
+.btn-content {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  justify-content: center;
+}
+
+.reward-icon, .coins {
+  font-size: 20px;
+  animation: bounce 1s infinite alternate;
+}
+
+.coins {
+  animation-delay: 0.5s;
+}
+
+.spinner {
+  width: 16px;
+  height: 16px;
+  border: 3px solid rgba(255,255,255,0.3);
+  border-radius: 50%;
+  border-top-color: white;
+  animation: spin 1s linear infinite;
+}
+
+.reward-claimed {
+  text-align: center;
+  background: linear-gradient(135deg, #10B981, #059669);
+  color: white;
+  padding: 20px;
+  border-radius: 20px;
+  box-shadow: 0 8px 25px rgba(16, 185, 129, 0.3);
+  animation: slideIn 0.5s ease-out;
+}
+
+.success-icon {
+  font-size: 24px;
+  margin-bottom: 8px;
+  display: block;
+}
+
+.celebration {
+  font-size: 24px;
+  animation: celebrate 0.6s ease-in-out;
+}
+
+/* Animations */
+@keyframes pulse-glow {
+  0%, 100% { box-shadow: 0 8px 25px rgba(255, 165, 0, 0.4); }
+  50% { box-shadow: 0 8px 35px rgba(255, 165, 0, 0.7); }
+}
+
+@keyframes bounce {
+  from { transform: translateY(0px); }
+  to { transform: translateY(-5px); }
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes claiming-shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+@keyframes slideIn {
+  from { 
+    opacity: 0; 
+    transform: translateY(-20px); 
+  }
+  to { 
+    opacity: 1; 
+    transform: translateY(0); 
+  }
+}
+
+@keyframes celebrate {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.2) rotate(10deg); }
+}
