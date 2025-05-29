@@ -71,30 +71,14 @@ const RedeemStore = () => {
 
   // Load initial data
   useEffect(() => {
-    const loadInitialData = async () => {
-      // Load purchased books from localStorage
-      if (typeof window !== 'undefined') {
-        const savedPurchases = localStorage.getItem('purchasedBooks');
-        if (savedPurchases) {
-          try {
-            setPurchased(JSON.parse(savedPurchases));
-          } catch (error) {
-            console.error('Error parsing purchased books:', error);
-          }
-        }
-      }
-
-      // Fetch therapists from blockchain
+    const loadTherapists = async () => {
+      setLoading(true);
+      setError(null);
+  
       try {
-        setLoading(true);
-        setError(null);
-        
-        if (contract) {
-          // Get therapist addresses from blockchain
+        if (contract && account) {
           const therapistAddresses = await fetchTherapistAddressesFromEvents();
-
-          
-          // Fetch details for each therapist
+  
           const therapistPromises = therapistAddresses.map(async (address) => {
             const [name, sessionCount, isActive] = await contract.getTherapistData(address);
             return {
@@ -105,8 +89,7 @@ const RedeemStore = () => {
               isActive
             };
           });
-          
-          
+  
           const therapistsData = await Promise.all(therapistPromises);
           setTherapists(therapistsData.filter(t => t.isActive));
         }
@@ -117,9 +100,11 @@ const RedeemStore = () => {
         setLoading(false);
       }
     };
+  
+    loadTherapists();
+  }, [contract, account]);
 
-    loadInitialData();
-  }, [contract]);
+  
 
   // Update user data when account changes
   useEffect(() => {
@@ -329,6 +314,14 @@ const RedeemStore = () => {
             <div className="p-3 bg-gradient-to-r from-pink-500 to-purple-600 rounded-xl shadow-lg">
               <UserCheck className="w-8 h-8 text-white" />
             </div>
+            <button
+  onClick={therapists}
+  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg ml-4"
+>
+  🔄 Refresh
+</button>
+
+
             <div>
               <h2 className="text-3xl font-bold text-white">Available Therapists</h2>
               <p className="text-white/70 text-lg">{therapists.length} {therapists.length === 1 ? 'therapist' : 'therapists'}</p>

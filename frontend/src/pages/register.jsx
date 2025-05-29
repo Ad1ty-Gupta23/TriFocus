@@ -830,6 +830,8 @@ export default function Register() {
   }, [values, blockchainValues, navigate]);
 
   const handleBlockchainSetup = useCallback(async () => {
+    
+
     if (!blockchainValues.enableBlockchain) {
       await completeRegistration();
       return;
@@ -851,8 +853,11 @@ export default function Register() {
         toast.info("Registering as therapist on blockchain...");
         const therapistTxHash = await registerTherapist(blockchainValues.therapistName.trim());
         toast.success(`Therapist registered successfully! Transaction: ${therapistTxHash.slice(0, 10)}...`);
+      
+        // 🔁 Clear cache so RedeemStore fetches new data
+        localStorage.removeItem("therapistAddresses");
       }
-
+      
       await completeRegistration();
     } catch (err) {
       console.error("Blockchain setup error:", err);

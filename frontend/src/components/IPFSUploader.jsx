@@ -1,7 +1,10 @@
 import React, { useState } from 'react';
 import { Upload, X, FileText, Check, Loader2, AlertCircle } from 'lucide-react';
+import { useHabitBlockchain } from '../context/HabitBlockchainContext';
 
-const IPFSUploaderDebug = ({ patientAddress = "0x1234567890abcdef", onUploadComplete }) => {
+const IPFSUploaderDebug = ({ onUploadComplete }) => {
+  const { account: patientAddress } = useHabitBlockchain();
+
   const [file, setFile] = useState(null);
   const [fileName, setFileName] = useState('');
   const [fileSize, setFileSize] = useState(0);
@@ -98,84 +101,95 @@ const IPFSUploaderDebug = ({ patientAddress = "0x1234567890abcdef", onUploadComp
     };
   };
 
-  const uploadToIPFS = async () => {
-    clearDebugLogs();
-    addDebugLog('🚀 Starting upload process...');
+  // Fixed: This function now properly handles file upload to Pinata
+  const uploadToIPFS = async (fileToUpload) => {
+    const formData = new FormData();
+    formData.append('file', fileToUpload);
 
-    // Validation checks
+    try {
+      addDebugLog('🚀 Starting IPFS upload via Pinata...');
+      
+      // Check if JWT token is available
+      const pinataJWT = import.meta.env.VITE_PINATA_JWT;
+      if (!pinataJWT || pinataJWT === 'your_pinata_jwt_here') {
+        throw new Error('Pinata JWT token not configured. Please check your environment variables.');
+      }
+
+      addDebugLog('🔑 JWT token found, making request to Pinata...');
+
+      const response = await fetch('https://api.pinata.cloud/pinning/pinFileToIPFS', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${pinataJWT}`
+        },
+        body: formData
+      });
+
+      addDebugLog(`📡 Response status: ${response.status} ${response.statusText}`);
+
+      if (!response.ok) {
+        const errorData = await response.text();
+        addDebugLog(`❌ Error response: ${errorData}`);
+        throw new Error(`Pinata upload failed: ${response.status} ${response.statusText}`);
+      }
+
+      const result = await response.json();
+      addDebugLog(`✅ Upload successful! IPFS Hash: ${result.IpfsHash}`);
+
+      return result.IpfsHash; // Return the valid CID
+    } catch (error) {
+      addDebugLog(`❌ IPFS Upload Error: ${error.message}`);
+      console.error('❌ IPFS Upload Error:', error.message);
+      throw error;
+    }
+  };
+
+  // Fixed: Main upload handler that manages the upload process
+  const handleUpload = async () => {
     if (!file) {
       setError('Please select a file first');
-      addDebugLog('❌ No file selected');
       return;
     }
 
     if (!patientAddress) {
-      setError('Patient address is required');
-      addDebugLog('❌ No patient address provided');
+      setError('Patient address not available');
+      addDebugLog('❌ Patient address missing');
       return;
     }
 
+    setUploading(true);
+    setError('');
+    
     try {
-      setUploading(true);
-      setError('');
+      addDebugLog('🔄 Starting upload process...');
       
-      addDebugLog('📤 Preparing file for upload...');
+      // Upload to IPFS via Pinata
+      const cid = await uploadToIPFS(file);
       
-      // Check if backend is reachable (simulation)
-      addDebugLog('🔍 Checking IPFS backend connection...');
+      // Set success state
+      setIpfsCID(cid);
+      setUploadSuccess(true);
       
-      // Simulate the actual upload process your code does
-      const formData = new FormData();
-      formData.append('file', file);
+      // Create download link
+      const gatewayUrl = import.meta.env.VITE_PINATA_GATEWAY || 'https://gateway.pinata.cloud';
+      const downloadUrl = `${gatewayUrl}/ipfs/${cid}`;
+      setDownloadLink(downloadUrl);
       
-      addDebugLog('📋 FormData prepared, making request to localhost:5000...');
-
-      try {
-        // In your real code, this would be the actual fetch call
-        // const response = await fetch('http://localhost:5000/api/ipfs/upload', {
-        //   method: 'POST',
-        //   body: formData
-        // });
-        
-        // For demo purposes, simulate the upload
-        addDebugLog('⏳ Uploading to IPFS node...');
-        const data = await simulateIPFSUpload(file);
-        
-        const cid = data.cid;
-        setIpfsCID(cid);
-        setDownloadLink(`https://gateway.pinata.cloud/ipfs/${cid}`);
-        
-        addDebugLog(`✅ IPFS upload successful! CID: ${cid}`);
-        
-        // Upload to blockchain
-        addDebugLog('🔗 Starting blockchain transaction...');
-        await uploadEncryptedReport(patientAddress, cid);
-        
-        setUploadSuccess(true);
-        addDebugLog('🎉 Upload process completed successfully!');
-
-        if (onUploadComplete) onUploadComplete(cid);
-        
-      } catch (fetchError) {
-        throw new Error(`Backend connection failed: ${fetchError.message}`);
+      addDebugLog(`📥 Download link: ${downloadUrl}`);
+      
+      // Simulate blockchain upload
+      await uploadEncryptedReport(patientAddress, cid);
+      
+      addDebugLog('🎉 Upload process completed successfully!');
+      
+      // Call callback if provided
+      if (onUploadComplete) {
+        onUploadComplete({ cid, downloadUrl });
       }
       
-    } catch (error) {
-      console.error('Error uploading to IPFS:', error);
-      setError(`Upload failed: ${error.message}`);
-      addDebugLog(`❌ Upload failed: ${error.message}`);
-      
-      // Common error scenarios
-      if (error.message.includes('fetch')) {
-        addDebugLog('💡 Tip: Make sure your backend server is running on localhost:5000');
-      }
-      if (error.message.includes('CORS')) {
-        addDebugLog('💡 Tip: Check CORS configuration in your backend');
-      }
-      if (error.message.includes('timeout')) {
-        addDebugLog('💡 Tip: Check your internet connection and IPFS node status');
-      }
-      
+    } catch (err) {
+      setError(err.message);
+      addDebugLog(`💥 Upload failed: ${err.message}`);
     } finally {
       setUploading(false);
     }
@@ -211,7 +225,10 @@ const IPFSUploaderDebug = ({ patientAddress = "0x1234567890abcdef", onUploadComp
           </div>
 
           {!file ? (
-            <div className="border-2 border-dashed border-gray-300 rounded-xl p-8 text-center hover:border-indigo-500 transition-colors cursor-pointer" onClick={() => document.getElementById('file-upload').click()}>
+            <div 
+              className="border-2 border-dashed border-gray-300 rounded-xl p-8 text-center hover:border-indigo-500 transition-colors cursor-pointer" 
+              onClick={() => document.getElementById('file-upload').click()}
+            >
               <input
                 id="file-upload"
                 type="file"
@@ -263,7 +280,7 @@ const IPFSUploaderDebug = ({ patientAddress = "0x1234567890abcdef", onUploadComp
                 </div>
               ) : (
                 <button
-                  onClick={uploadToIPFS}
+                  onClick={handleUpload}
                   disabled={uploading}
                   className="w-full py-3 px-4 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg hover:from-indigo-700 hover:to-purple-700 transition-all duration-300 flex items-center justify-center disabled:opacity-70"
                 >
@@ -313,17 +330,48 @@ const IPFSUploaderDebug = ({ patientAddress = "0x1234567890abcdef", onUploadComp
         </div>
       </div>
 
+      {/* Environment Variables Check */}
+      <div className="bg-blue-50 rounded-2xl p-6 border border-blue-200">
+        <h4 className="font-semibold text-blue-800 mb-3">Environment Variables Status:</h4>
+        <div className="space-y-2 text-sm">
+          <div className="flex items-center">
+            <span className={`w-3 h-3 rounded-full mr-2 ${
+              import.meta.env.VITE_PINATA_JWT && import.meta.env.VITE_PINATA_JWT !== 'your_pinata_jwt_here' 
+                ? 'bg-green-500' : 'bg-red-500'
+            }`}></span>
+            <span className="text-blue-700">
+              VITE_PINATA_JWT: {
+                import.meta.env.VITE_PINATA_JWT && import.meta.env.VITE_PINATA_JWT !== 'your_pinata_jwt_here' 
+                  ? '✅ Configured' : '❌ Not configured'
+              }
+            </span>
+          </div>
+          <div className="flex items-center">
+            <span className={`w-3 h-3 rounded-full mr-2 ${
+              import.meta.env.VITE_PINATA_GATEWAY 
+                ? 'bg-green-500' : 'bg-yellow-500'
+            }`}></span>
+            <span className="text-blue-700">
+              VITE_PINATA_GATEWAY: {
+                import.meta.env.VITE_PINATA_GATEWAY 
+                  ? '✅ Configured' : '⚠️ Using default'
+              }
+            </span>
+          </div>
+        </div>
+      </div>
+
       {/* Common Issues Checklist */}
       <div className="bg-yellow-50 rounded-2xl p-6 border border-yellow-200">
         <h4 className="font-semibold text-yellow-800 mb-3">Common Upload Issues Checklist:</h4>
         <div className="space-y-2 text-sm text-yellow-700">
-          <div>🔍 <strong>Backend Server:</strong> Is your Node.js server running on localhost:5000?</div>
-          <div>🌐 <strong>CORS:</strong> Does your backend allow requests from your frontend domain?</div>
+          <div>🔑 <strong>Pinata JWT:</strong> Is your VITE_PINATA_JWT environment variable set correctly?</div>
+          <div>🌐 <strong>CORS:</strong> Pinata API should handle CORS automatically</div>
           <div>📁 <strong>File Size:</strong> Is your file under 10MB?</div>
-          <div>🔗 <strong>IPFS Node:</strong> Is your IPFS node running and reachable?</div>
+          <div>🔗 <strong>Network:</strong> Is your internet connection stable?</div>
           <div>🔑 <strong>Patient Address:</strong> Is a valid patient address provided?</div>
           <div>⛓️ <strong>Blockchain Context:</strong> Is the useHabitBlockchain hook working properly?</div>
-          <div>🔒 <strong>Network:</strong> Check browser developer tools for network errors</div>
+          <div>🔒 <strong>Browser Console:</strong> Check developer tools for detailed error messages</div>
         </div>
       </div>
     </div>
