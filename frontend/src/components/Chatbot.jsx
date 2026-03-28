@@ -6,7 +6,7 @@ const Chatbot = () => {
   const [messages, setMessages] = useState([
     {
       id: 1,
-      text: "Hello!!! I'm TriFocus AI, your AI-powered Therapy assistant. How can I help you today?",
+      text: "Hello I'm TriFocus AI, your AI-powered Therapy assistant. How can I help you today?",
       sender: 'bot',
       timestamp: new Date().toISOString()
     }
