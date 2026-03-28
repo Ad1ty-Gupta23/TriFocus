@@ -6,7 +6,7 @@ const Chatbot = () => {
   const [messages, setMessages] = useState([
     {
       id: 1,
-      text: "Hello! I'm triFocus AI, your AI-powered medical assistant. How can I help you today?",
+      text: "Hello! I'm TriFocus AI, your AI-powered Therapy assistant. How can I help you today?",
       sender: 'bot',
       timestamp: new Date().toISOString()
     }
@@ -39,7 +39,7 @@ const Chatbot = () => {
       audioUrl
     };
     setMessages(prev => [...prev, newMessage]);
-    
+
     // Auto-play audio for bot responses
     if (sender === 'bot' && audioUrl) {
       setTimeout(() => {
@@ -75,10 +75,10 @@ const Chatbot = () => {
       }
 
       const data = await response.json();
-      
+
       // Add bot response
       addMessage(data.text_response, 'bot', data.audio_file_path);
-      
+
     } catch (error) {
       console.error('Error sending message:', error);
       addMessage('Sorry, I encountered an error. Please try again or consult a healthcare professional.', 'bot');
@@ -145,15 +145,15 @@ const Chatbot = () => {
       }
 
       const data = await response.json();
-      
+
       // Add transcribed text
       if (data.transcribed_text) {
         addMessage(`Transcribed: "${data.transcribed_text}"`, 'user');
       }
-      
+
       // Add bot response
       addMessage(data.text_response, 'bot', data.audio_file_path);
-      
+
     } catch (error) {
       console.error('Error processing voice message:', error);
       addMessage('Sorry, I couldn\'t process your voice message. Please try again.', 'bot');
@@ -225,8 +225,8 @@ const Chatbot = () => {
               >
                 <div className={`flex items-start space-x-2 max-w-[80%] ${message.sender === 'user' ? 'flex-row-reverse space-x-reverse' : ''}`}>
                   <div className={`w-6 h-6 rounded-full flex items-center justify-center ${
-                    message.sender === 'user' 
-                      ? 'bg-gradient-to-r from-green-300 to-emerald-300' 
+                    message.sender === 'user'
+                      ? 'bg-gradient-to-r from-green-300 to-emerald-300'
                       : 'bg-gradient-to-r from-purple-300 to-pink-300'
                   }`}>
                     {message.sender === 'user' ? (
@@ -268,7 +268,7 @@ const Chatbot = () => {
                 </div>
               </div>
             ))}
-            
+
             {/* Typing Indicator */}
             {isTyping && (
               <div className="flex justify-start">
@@ -305,8 +305,8 @@ const Chatbot = () => {
                 <button
                   onClick={isRecording ? stopRecording : startRecording}
                   className={`absolute right-2 top-2 p-1 rounded-lg transition-colors ${
-                    isRecording 
-                      ? 'bg-red-500 text-white' 
+                    isRecording
+                      ? 'bg-red-500 text-white'
                       : 'text-purple-400 hover:text-purple-600 hover:bg-purple-50'
                   }`}
                 >
@@ -321,7 +321,7 @@ const Chatbot = () => {
                 <Send className="w-4 h-4" />
               </button>
             </div>
-            
+
             {/* Disclaimer */}
             <div className="mt-2 text-xs text-gray-500 text-center">
               <p>⚠️ This is for informational purposes only. Consult healthcare professionals for medical advice.</p>
